@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import AuthProvider from "../components/AuthProvider";
 import AuthButton from "../components/AuthButton";
 
 const geistSans = Geist({
@@ -27,24 +26,22 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur border-b border-gray-200">
-            <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-              <a href="/">
-                <img
-                  src="/ic_launcher_resp.png"
-                  alt="RESP"
-                  className="h-14"
-                />
-              </a>
-              <div className="flex items-center gap-6">
-                <AuthButton />
-              </div>
+        <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur border-b border-gray-200">
+          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+            <a href="/">
+              <img
+                src="/ic_launcher_resp.png"
+                alt="RESP"
+                className="h-14"
+              />
+            </a>
+            <div className="flex items-center gap-6">
+              <AuthButton />
             </div>
-          </header>
+          </div>
+        </header>
 
-          {children}
-        </AuthProvider>
+        {children}
       </body>
     </html>
   );

@@ -190,7 +190,7 @@ export default function Home() {
             <p className="mt-3 text-white/90 text-base">無料で登録して議論を始めましょう。</p>
 
             <div className="mx-auto mt-8 flex justify-center">
-              <a href="/auth/login?screen_hint=signup">
+              <a href="/api/auth/login?screen_hint=signup">
                 <Button className="rounded-full bg-white text-[#0d3b66] font-semibold hover:scale-105 transition-transform px-8 py-6 text-lg">
                   無料で登録する
                   <ArrowRight className="ml-2 h-4 w-4" />
