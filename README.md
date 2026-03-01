@@ -1,5 +1,10 @@
 [Next.js](https://nextjs.org)プロジェクトです。[`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app)で作成されました。
 
+## プロジェクトドキュメント
+
+- 方針・意思決定ログ: `docs/decision-log.md`
+- 仕様書: `docs/specification.md`
+
 ## はじめに
 
 ### ローカル開発
