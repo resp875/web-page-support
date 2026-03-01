@@ -1,15 +1,141 @@
 "use client"
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 import { motion } from "framer-motion";
 import Head from "next/head";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageCircle, Brain, Layers, ArrowRight } from "lucide-react";
 
-export default function Home() {
+type AuthState = "loading" | "guest" | "member";
+
+interface User {
+  name?: string;
+  picture?: string;
+  email?: string;
+}
+
+function LoggedInHome({ user }: { user: User | null }) {
+  const [isSubmittingAndroidRequest, setIsSubmittingAndroidRequest] = useState(false);
+  const [androidRequestMessage, setAndroidRequestMessage] = useState<string>("");
+
+  const handleAndroidRequest = async () => {
+    if (isSubmittingAndroidRequest) {
+      return;
+    }
+
+    setIsSubmittingAndroidRequest(true);
+    setAndroidRequestMessage("");
+
+    try {
+      const response = await fetch("/api/closed-test/android-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setAndroidRequestMessage(data?.message || "参加リクエストの送信に失敗しました。時間をおいて再度お試しください。");
+        return;
+      }
+
+      setAndroidRequestMessage(data?.message || "参加リクエストを受け付けました。処理完了後にご案内します。");
+    } catch {
+      setAndroidRequestMessage("参加リクエストの送信に失敗しました。時間をおいて再度お試しください。");
+    } finally {
+      setIsSubmittingAndroidRequest(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col bg-gray-50 font-sans">
+      <section className="bg-white py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h1 className="text-3xl font-bold text-[#0d3b66]">ようこそ、{user?.name || "Respユーザー"} さん</h1>
+          <p className="mt-3 text-gray-600">
+            テスト参加申請、マニュアル確認、開発イベント情報の確認をこのページから行えます。
+          </p>
+        </div>
+      </section>
+
+      <section className="py-10">
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-2">
+          <Card className="rounded-xl shadow-sm">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-[#0d3b66]">Android クローズドテスト参加申請</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                参加リクエストを送信すると、バックエンドで非同期処理を行い、完了後に参加URLを連携します。
+              </p>
+              <Button
+                className="mt-5 bg-[#0d3b66] text-white hover:bg-[#155a91]"
+                onClick={handleAndroidRequest}
+                disabled={isSubmittingAndroidRequest}
+              >
+                {isSubmittingAndroidRequest ? "送信中..." : "Androidテスト参加をリクエスト"}
+              </Button>
+              {androidRequestMessage && (
+                <p className="mt-3 text-sm text-gray-700">{androidRequestMessage}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl shadow-sm">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-[#0d3b66]">iOS クローズドテスト（案内）</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                iOSは現在、参加案内のみ提供しています。申請機能は後続フェーズで追加予定です。
+              </p>
+              <p className="mt-4 text-sm text-gray-700">
+                準備ができ次第、この画面で申請導線を公開します。
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl shadow-sm">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-[#0d3b66]">操作マニュアル</h2>
+              <p className="mt-2 text-sm text-gray-600">Respアプリの詳しい操作手順を確認できます。</p>
+              <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                <li>アカウント初期設定（準備中）</li>
+                <li>議論の開始方法（準備中）</li>
+                <li>リアクション・評価機能の使い方（準備中）</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl shadow-sm">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-[#0d3b66]">開発イベント情報</h2>
+              <p className="mt-2 text-sm text-gray-600">アップデート情報やイベント予定を確認できます。</p>
+              <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                <li>次回アップデート告知（準備中）</li>
+                <li>ユーザーフィードバック会（準備中）</li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <footer id="contact" className="mt-auto bg-gray-100 py-10">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 text-sm text-gray-600 sm:flex-row sm:px-6">
+          <p>© 2025 Resp</p>
+          <nav className="flex gap-4">
+            <a href="/privacy" className="hover:text-[#0d3b66]">プライバシーポリシー</a>
+            <a href="/terms" className="hover:text-[#0d3b66]">利用規約</a>
+            <a href="mailto:respwork11+support@gmail.com" className="hover:text-[#0d3b66]">お問い合わせ</a>
+          </nav>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function LoggedOutHome() {
   return (
     <>
       <Head>
@@ -216,4 +342,42 @@ export default function Home() {
       </div>
     </>
   );
+}
+
+export default function Home() {
+  const [authState, setAuthState] = useState<AuthState>("loading");
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        const data = await response.json();
+        if (data?.user) {
+          setUser(data.user);
+          setAuthState("member");
+          return;
+        }
+      } catch {
+      }
+
+      setAuthState("guest");
+    };
+
+    loadUser();
+  }, []);
+
+  if (authState === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white px-4 text-gray-600">
+        読み込み中...
+      </div>
+    );
+  }
+
+  if (authState === "member") {
+    return <LoggedInHome user={user} />;
+  }
+
+  return <LoggedOutHome />;
 }

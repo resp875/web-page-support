@@ -20,6 +20,7 @@ export async function GET(
 ) {
   const { auth0: segments } = await params;
   const path = segments?.join('/') || '';
+  const isSecureCookie = req.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production';
 
   try {
     if (path === 'login') {
@@ -49,13 +50,13 @@ export async function GET(
       // Store state and returnTo in cookie for verification
       response.cookies.set('auth_state', state, {
         httpOnly: true,
-        secure: true,
+        secure: isSecureCookie,
         sameSite: 'lax',
         maxAge: 600, // 10 minutes
       });
       response.cookies.set('auth_return_to', returnTo, {
         httpOnly: true,
-        secure: true,
+        secure: isSecureCookie,
         sameSite: 'lax',
         maxAge: 600,
       });
@@ -128,7 +129,7 @@ export async function GET(
       // Store tokens in httpOnly cookie (simple implementation)
       response.cookies.set('auth_session', JSON.stringify(tokens), {
         httpOnly: true,
-        secure: true,
+        secure: isSecureCookie,
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, // 7 days
       });

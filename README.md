@@ -96,6 +96,30 @@ npm run deploy
 
 このアプリはAuth0を使用した認証機能を実装しており、Cloudflare Workersと互換性のあるカスタムOAuth2実装を使用しています。
 
+### `npm run dev`（localhost:3000）でのローカル設定
+
+`npm run dev` で認証を動かす場合は、プロジェクトルートに `.env.local` を作成して以下を設定してください。
+
+```env
+AUTH0_DOMAIN=your-tenant.us.auth0.com
+AUTH0_CLIENT_ID=your_client_id
+AUTH0_CLIENT_SECRET=your_client_secret
+AUTH0_APP_BASE_URL=http://localhost:3000
+AUTH0_SECRET=random_32_character_string
+```
+
+Auth0アプリケーション側の設定値:
+
+- Allowed Callback URLs: `http://localhost:3000/api/auth/callback`
+- Allowed Logout URLs: `http://localhost:3000`
+- Allowed Web Origins: `http://localhost:3000`
+
+その後、開発サーバーを再起動してください。
+
+```bash
+npm run dev
+```
+
 ### ローカル環境のセットアップ
 
 1. https://manage.auth0.com/ でAuth0アプリケーションを作成
