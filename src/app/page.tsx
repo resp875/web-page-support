@@ -167,7 +167,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="font-semibold">開発者プロフィール</p>
-                    <p className="text-xs text-gray-600">Yushi Tanaka : モバイルエンジニア。モダンなコミュニケーション体験を研究中。</p>
+                    <p className="text-xs text-gray-600">田中 雄志 : 東京大学卒業、公共政策大学院修了。公共的な言論空間のあり方について課題意識を持つ。外務省、戦略コンサルティングなどの経歴を経て、現在はフリーランスのITエンジニアとして活動中。</p>
                   </div>
                 </CardContent>
               </Card>
