@@ -1,49 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+[Next.js](https://nextjs.org)プロジェクトです。[`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app)で作成されました。
 
-## Getting Started
+## はじめに
 
-First, run the development server:
+### ローカル開発
+
+開発サーバーを起動します：
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで [http://localhost:3000](http://localhost:3000) を開いて結果を確認してください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Cloudflare Workersでのプレビュー
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Cloudflare Workers環境でアプリをローカルテストします：
 
-## Learn More
+```bash
+npm run preview
+```
 
-To learn more about Next.js, take a look at the following resources:
+ブラウザで [http://localhost:8787](http://localhost:8787) を開いて結果を確認してください。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`app/page.tsx`を編集してページを変更できます。ファイルを編集すると自動的にページが更新されます。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+このプロジェクトは[`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts)を使用して、Vercel用の新しいフォントファミリー[Geist](https://vercel.com/font)を自動的に最適化して読み込みます。
 
-## Deploy on Vercel
+## より詳しく学ぶ
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Next.jsについて詳しく学ぶには、以下のリソースをご覧ください：
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js ドキュメント](https://nextjs.org/docs) - Next.jsの機能とAPIについて学習
+- [Learn Next.js](https://nextjs.org/learn) - インタラクティブなNext.jsチュートリアル
 
-## Auth0 integration
+[Next.js GitHubリポジトリ](https://github.com/vercel/next.js)もチェックしてください - フィードバックや貢献を歓迎します！
 
-Quick setup:
+## Cloudflare Workersへのデプロイ
 
-1. Create an Auth0 Application at https://auth0.com and note **Domain**, **Client ID**, and **Client Secret**.
-2. Copy `.env.local.example` to `.env.local` and fill in the values (`AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_ISSUER_BASE_URL`, `AUTH0_SECRET`, `AUTH0_BASE_URL`).
-3. Start the app locally with `npm run dev` and visit the login link in the header (top-right).
+このアプリは[OpenNext Cloudflare](https://opennext.js.org/cloudflare)を使用してCloudflare Workersにデプロイされています。
 
-Notes:
+### 前提条件
 
-- Auth0 middleware is configured in `src/proxy.ts` and the SDK client is in `src/lib/auth0.ts`. The client helper is `src/components/AuthButton.tsx` — use `/auth/login` to start the login flow.
-- For production, set `AUTH0_BASE_URL` to your production URL and create secure secrets in your deployment platform (Vercel, etc.).
+1. Cloudflareアカウント（無料プランあり）
+2. R2バケットの有効化
+3. Wrangler CLI（開発依存関係としてインストール済み）
+
+### セットアップ
+
+1. **Cloudflareにログイン**:
+   ```bash
+   npx wrangler login
+   ```
+
+2. **R2バケットを作成**（まだ存在しない場合）:
+   ```bash
+   npx wrangler r2 bucket create cache
+   ```
+
+3. **環境変数を設定**:
+   ```bash
+   npx wrangler secret put AUTH0_DOMAIN
+   npx wrangler secret put AUTH0_CLIENT_ID
+   npx wrangler secret put AUTH0_CLIENT_SECRET
+   npx wrangler secret put AUTH0_SECRET
+   npx wrangler secret put AUTH0_APP_BASE_URL
+   ```
+
+4. **本番環境にデプロイ**:
+   ```bash
+   npm run deploy
+   ```
+
+### デプロイの更新
+
+コード変更後、最新版をデプロイします：
+
+```bash
+npm run deploy
+```
+
+変更は https://support.resp.work に反映されます。
+
+### 設定ファイル
+
+- **wrangler.jsonc**: Cloudflare Workers設定
+- **open-next.config.ts**: OpenNext Cloudflare設定
+- **.dev.vars**: ローカル環境変数（gitにコミットされません）
+
+## Auth0連携
+
+このアプリはAuth0を使用した認証機能を実装しており、Cloudflare Workersと互換性のあるカスタムOAuth2実装を使用しています。
+
+### ローカル環境のセットアップ
+
+1. https://manage.auth0.com/ でAuth0アプリケーションを作成
+   - **Domain**、**Client ID**、**Client Secret**をメモ
+
+2. プロジェクトルートに`.dev.vars`ファイルを作成：
+   ```
+   AUTH0_DOMAIN=your-tenant.us.auth0.com
+   AUTH0_CLIENT_ID=your_client_id
+   AUTH0_CLIENT_SECRET=your_client_secret
+   AUTH0_SECRET=random_32_character_string
+   AUTH0_APP_BASE_URL=http://localhost:8787
+   ```
+
+3. Auth0アプリケーションの設定を行う：
+   - **Allowed Callback URLs**: `http://localhost:8787/api/auth/callback`
+   - **Allowed Logout URLs**: `http://localhost:8787`
+   - **Allowed Web Origins**: `http://localhost:8787`
+
+4. プレビューサーバーを起動：
+   ```bash
+   npm run preview
+   ```
+
+5. http://localhost:8787 にアクセスしてヘッダーの「Log in」をクリック
+
+### 本番環境のセットアップ
+
+https://support.resp.work での本番デプロイ用：
+
+1. Auth0に本番URLを追加：
+   - **Allowed Callback URLs**: `https://support.resp.work/api/auth/callback`
+   - **Allowed Logout URLs**: `https://support.resp.work`
+   - **Allowed Web Origins**: `https://support.resp.work`
+
+2. 本番環境のシークレットを設定（上記のデプロイセクションを参照）
+
+### 実装の詳細
+
+- **認証フロー**: Next.js API Routesを使用したカスタムOAuth2実装
+- **APIエンドポイント**: `/api/auth/login`, `/api/auth/logout`, `/api/auth/callback`, `/api/auth/me`
+- **セッション保存**: HTTPオンリークッキー
+- **クライアントコンポーネント**: `src/components/AuthButton.tsx`
+- **ランタイム**: Node.js（Cloudflare Workers互換）

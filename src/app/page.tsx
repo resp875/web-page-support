@@ -36,7 +36,7 @@ export default function Home() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
-                <a href="#signup">
+                <a href="/api/auth/login?screen_hint=signup">
                   <Button className="rounded-full bg-white text-[#0d3b66] font-semibold px-8 py-6 text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-transform">
                     今すぐベータ版に参加する
                   </Button>
