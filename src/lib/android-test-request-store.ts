@@ -146,6 +146,64 @@ interface TransitionInput {
   testJoinUrl?: string;
 }
 
+export async function claimQueuedJobsForProcessing(limit: number): Promise<AndroidTestRequestJob[]> {
+  const safeLimit = Math.max(1, Math.min(limit, 20));
+
+  if (sql) {
+    const rows = await sql`
+      with claimed as (
+        select request_id
+        from android_test_request_jobs
+        where status = 'queued'
+        order by created_at asc
+        limit ${safeLimit}
+        for update skip locked
+      )
+      update android_test_request_jobs jobs
+      set
+        status = 'processing',
+        updated_at = now(),
+        processing_started_at = now(),
+        attempt_count = jobs.attempt_count + 1,
+        error_code = null,
+        error_message = null
+      from claimed
+      where jobs.request_id = claimed.request_id
+      returning jobs.*
+    `;
+
+    return rows.map((row) => mapDbRowToJob(row as Record<string, unknown>));
+  }
+
+  const claimedJobs: AndroidTestRequestJob[] = [];
+
+  for (const job of jobStore.values()) {
+    if (claimedJobs.length >= safeLimit) {
+      break;
+    }
+
+    if (job.status !== "queued") {
+      continue;
+    }
+
+    const timestamp = nowIso();
+    const updated: AndroidTestRequestJob = {
+      ...job,
+      status: "processing",
+      updatedAt: timestamp,
+      processingStartedAt: timestamp,
+      attemptCount: job.attemptCount + 1,
+      errorCode: null,
+      errorMessage: null,
+    };
+
+    jobStore.set(updated.requestId, updated);
+    claimedJobs.push(updated);
+  }
+
+  return claimedJobs;
+}
+
 export async function transitionJobStatus(requestId: string, input: TransitionInput): Promise<AndroidTestRequestJob> {
   if (sql) {
     const rows = await sql`

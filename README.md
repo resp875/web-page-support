@@ -28,6 +28,26 @@ DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 - `DATABASE_URL` がある場合: Android申請ジョブはNeonに永続化
 - `DATABASE_URL` がない場合: メモリ保存で動作（開発用フォールバック）
 
+### queued -> processing の自動遷移（Vercel Cron）
+
+- 設定ファイル: `vercel.json`
+- 実行API: `GET /api/cron/android-request-processor`
+- 実行間隔: `*/3 * * * *`（3分ごと）
+
+推奨設定:
+
+```env
+CRON_SECRET=your_random_long_secret
+```
+
+`CRON_SECRET` を設定しておくと、Cron APIは `Authorization: Bearer <CRON_SECRET>` を要求します。
+
+ローカル確認例:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/android-request-processor"
+```
+
 ## はじめに
 
 ### ローカル開発

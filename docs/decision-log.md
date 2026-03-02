@@ -83,3 +83,7 @@
 6. **Android申請ジョブのNeon永続化を実装**
    - 内容: `DATABASE_URL` が設定されている場合、ジョブ作成/参照/遷移をNeon(Postgres)へ保存
    - 補足: `DATABASE_URL` 未設定時は既存メモリストアへフォールバック
+
+7. **Cronによる `queued -> processing` 自動遷移を実装**
+   - 内容: `GET /api/cron/android-request-processor` を追加し、`queued` ジョブを最大5件ずつ `processing` へ遷移
+   - 運用: Vercel Cron（3分間隔）で起動し、`CRON_SECRET` による保護をサポート
