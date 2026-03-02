@@ -34,10 +34,22 @@ DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 - 実行API: `GET /api/cron/android-request-processor`
 - 実行間隔: `*/3 * * * *`（3分ごと）
 
+### processing -> done/failed の自動遷移（Vercel Cron）
+
+- 設定ファイル: `vercel.json`
+- 実行API: `GET /api/cron/android-request-completer`
+- 実行間隔: `*/3 * * * *`（3分ごと）
+- 現時点ではGoogle Play連携はモック実装
+
 推奨設定:
 
 ```env
 CRON_SECRET=your_random_long_secret
+ANDROID_TEST_JOIN_URL=https://play.google.com/apps/testing/com.example.resp
+# 任意: 強制的に失敗させる場合
+# ANDROID_MOCK_FORCE_FAIL=true
+# 任意: requestIdの末尾が一致する場合に失敗させる（カンマ区切り）
+# ANDROID_MOCK_FAIL_SUFFIXES=a,b,c
 ```
 
 `CRON_SECRET` を設定しておくと、Cron APIは `Authorization: Bearer <CRON_SECRET>` を要求します。

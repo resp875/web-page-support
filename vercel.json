@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/android-request-processor",
       "schedule": "*/3 * * * *"
+    },
+    {
+      "path": "/api/cron/android-request-completer",
+      "schedule": "*/3 * * * *"
     }
   ]
 }

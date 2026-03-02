@@ -146,6 +146,29 @@ interface TransitionInput {
   testJoinUrl?: string;
 }
 
+export async function listJobsByStatus(status: AndroidRequestStatus, limit: number): Promise<AndroidTestRequestJob[]> {
+  const safeLimit = Math.max(1, Math.min(limit, 50));
+
+  if (sql) {
+    const rows = await sql`
+      select *
+      from android_test_request_jobs
+      where status = ${status}
+      order by created_at asc
+      limit ${safeLimit}
+    `;
+
+    return rows.map((row) => mapDbRowToJob(row as Record<string, unknown>));
+  }
+
+  const jobs = Array.from(jobStore.values())
+    .filter((job) => job.status === status)
+    .sort((first, second) => first.createdAt.localeCompare(second.createdAt))
+    .slice(0, safeLimit);
+
+  return jobs;
+}
+
 export async function claimQueuedJobsForProcessing(limit: number): Promise<AndroidTestRequestJob[]> {
   const safeLimit = Math.max(1, Math.min(limit, 20));
 

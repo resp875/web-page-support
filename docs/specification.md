@@ -1,7 +1,7 @@
 # Resp Support 仕様書
 
 最終更新日: 2026-03-02
-バージョン: v0.7
+バージョン: v0.8
 
 このファイルは、決定・実装した仕様を記録するための仕様書です。  
 今後、仕様の追加・修正があった場合は、必ずこのファイルを更新します。
@@ -78,6 +78,11 @@
 	- `queued` を最大5件ずつ `processing` へ遷移（デフォルト）
 	- `limit` クエリで件数上限変更可（1〜20）
 	- `CRON_SECRET` 設定時は `Authorization: Bearer <CRON_SECRET>` を要求
+- Cron完了処理: `GET /api/cron/android-request-completer`
+	- `processing` を最大5件ずつ `done/failed` へ遷移（デフォルト）
+	- `ANDROID_TEST_JOIN_URL` を `done` 時の参加URLとして保存
+	- `ANDROID_MOCK_FORCE_FAIL=true` で全件失敗（モック検証用）
+	- `ANDROID_MOCK_FAIL_SUFFIXES`（カンマ区切り）で requestId 末尾一致の失敗制御が可能
 
 補足:
 - `DATABASE_URL` 設定時はNeon(Postgres)へ永続化
@@ -112,6 +117,7 @@
 - 2026-03-02: v0.5 更新（Android申請ジョブ管理APIを実装: 申請受付の再利用、ステータス参照、状態遷移）
 - 2026-03-02: v0.6 更新（Neon永続化を実装、`DATABASE_URL` 未設定時フォールバックを追加、無料寄せ構成を追記）
 - 2026-03-02: v0.7 更新（Vercel Cronによる `queued -> processing` 自動遷移を追加）
+- 2026-03-02: v0.8 更新（Vercel Cronによる `processing -> done/failed` 自動遷移を追加、モック失敗制御を追加）
 
 ## 8. 次フェーズのタスク予定（作業中断時点）
 

@@ -87,3 +87,7 @@
 7. **Cronによる `queued -> processing` 自動遷移を実装**
    - 内容: `GET /api/cron/android-request-processor` を追加し、`queued` ジョブを最大5件ずつ `processing` へ遷移
    - 運用: Vercel Cron（3分間隔）で起動し、`CRON_SECRET` による保護をサポート
+
+8. **Cronによる `processing -> done/failed` 自動遷移を実装（モック）**
+   - 内容: `GET /api/cron/android-request-completer` を追加し、`processing` ジョブを完了または失敗へ遷移
+   - 補足: 現時点ではGoogle Play APIの代わりにモック結果を使用し、`ANDROID_TEST_JOIN_URL` を完了時に保存
