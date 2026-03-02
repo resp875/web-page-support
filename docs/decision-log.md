@@ -60,3 +60,19 @@
 6. **次フェーズ作業予定を整理して仕様書へ追記**
    - 内容: Android申請ジョブ管理API（`queued -> processing -> done/failed`）を最優先として、後続のGoogle Play連携・UI拡張・運用タスクを整理
    - 備考: 実作業は一時中断し、再開時は仕様書の「次フェーズのタスク予定」から着手する
+
+### 2026-03-02
+
+1. **Android申請ジョブ管理APIを実装（第1段）**
+   - 内容: `POST /api/closed-test/android-request` をジョブ保存連携へ拡張し、重複申請時の再利用（idempotent動作）を追加
+
+2. **ジョブステータス参照APIを追加**
+   - 内容: `GET /api/closed-test/android-request/:requestId` を追加し、申請ユーザー本人のみ参照可能に設定
+
+3. **状態遷移APIを追加**
+   - 内容: `POST /api/closed-test/android-request/:requestId/transition` を追加し、`queued -> processing -> done/failed` の遷移制御を実装
+   - 備考: `JOB_ADMIN_KEY` と `x-job-admin-key` による管理者更新をサポート
+
+4. **セッション共通処理とジョブストアをライブラリ化**
+   - 内容: `src/lib/auth-session.ts`, `src/lib/android-test-request-store.ts` を追加
+   - 備考: ジョブ保存は現時点でメモリ実装（次段で永続化予定）
