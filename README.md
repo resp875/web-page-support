@@ -45,12 +45,18 @@ DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 
 ```env
 CRON_SECRET=your_random_long_secret
+ANDROID_ENROLLMENT_PROVIDER=mock
 ANDROID_TEST_JOIN_URL=https://play.google.com/apps/testing/com.example.resp
 # 任意: 強制的に失敗させる場合
 # ANDROID_MOCK_FORCE_FAIL=true
 # 任意: requestIdの末尾が一致する場合に失敗させる（カンマ区切り）
 # ANDROID_MOCK_FAIL_SUFFIXES=a,b,c
 ```
+
+`ANDROID_ENROLLMENT_PROVIDER` は次の値を取ります。
+
+- `mock`（デフォルト）: モック処理で `done/failed` を返す
+- `google-play`: Google Play連携用プロバイダー（現時点では未実装のため失敗応答）
 
 `CRON_SECRET` を設定しておくと、Cron APIは `Authorization: Bearer <CRON_SECRET>` を要求します。
 

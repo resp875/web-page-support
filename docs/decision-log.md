@@ -91,3 +91,7 @@
 8. **Cronによる `processing -> done/failed` 自動遷移を実装（モック）**
    - 内容: `GET /api/cron/android-request-completer` を追加し、`processing` ジョブを完了または失敗へ遷移
    - 補足: 現時点ではGoogle Play APIの代わりにモック結果を使用し、`ANDROID_TEST_JOIN_URL` を完了時に保存
+
+9. **Android enrollment処理を抽象化レイヤーへ分離**
+   - 内容: `src/lib/android-test-enrollment-service.ts` を追加し、Cron完了処理からモック実装を分離
+   - 方針: `ANDROID_ENROLLMENT_PROVIDER` で `mock` / `google-play` を切替可能にし、Google Play本実装の差し替えを容易化

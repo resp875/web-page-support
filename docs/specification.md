@@ -1,7 +1,7 @@
 # Resp Support 仕様書
 
 最終更新日: 2026-03-02
-バージョン: v0.8
+バージョン: v0.9
 
 このファイルは、決定・実装した仕様を記録するための仕様書です。  
 今後、仕様の追加・修正があった場合は、必ずこのファイルを更新します。
@@ -83,6 +83,12 @@
 	- `ANDROID_TEST_JOIN_URL` を `done` 時の参加URLとして保存
 	- `ANDROID_MOCK_FORCE_FAIL=true` で全件失敗（モック検証用）
 	- `ANDROID_MOCK_FAIL_SUFFIXES`（カンマ区切り）で requestId 末尾一致の失敗制御が可能
+	- `ANDROID_ENROLLMENT_PROVIDER` で実装プロバイダーを切替（`mock` / `google-play`）
+
+実装補足（2026-03-02時点）:
+- Android enrollment処理は抽象化レイヤー経由で呼び出し
+- `mock` プロバイダーは実装済み
+- `google-play` プロバイダーはインターフェースのみ実装（本体未実装）
 
 補足:
 - `DATABASE_URL` 設定時はNeon(Postgres)へ永続化
@@ -118,6 +124,7 @@
 - 2026-03-02: v0.6 更新（Neon永続化を実装、`DATABASE_URL` 未設定時フォールバックを追加、無料寄せ構成を追記）
 - 2026-03-02: v0.7 更新（Vercel Cronによる `queued -> processing` 自動遷移を追加）
 - 2026-03-02: v0.8 更新（Vercel Cronによる `processing -> done/failed` 自動遷移を追加、モック失敗制御を追加）
+- 2026-03-02: v0.9 更新（Android enrollment処理を抽象化、`ANDROID_ENROLLMENT_PROVIDER` で実装切替可能に変更）
 
 ## 8. 次フェーズのタスク予定（作業中断時点）
 

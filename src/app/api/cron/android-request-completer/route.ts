@@ -3,6 +3,7 @@ import {
   listJobsByStatus,
   transitionJobStatus,
 } from "@/lib/android-test-request-store";
+import { getAndroidTestEnrollmentService } from "@/lib/android-test-enrollment-service";
 
 function isAuthorizedCronRequest(req: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
@@ -12,19 +13,6 @@ function isAuthorizedCronRequest(req: NextRequest): boolean {
 
   const authHeader = req.headers.get("authorization") || "";
   return authHeader === `Bearer ${cronSecret}`;
-}
-
-function shouldMockFail(requestId: string): boolean {
-  if (process.env.ANDROID_MOCK_FORCE_FAIL === "true") {
-    return true;
-  }
-
-  const failSuffixes = (process.env.ANDROID_MOCK_FAIL_SUFFIXES || "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  return failSuffixes.some((suffix) => requestId.endsWith(suffix));
 }
 
 export async function GET(req: NextRequest) {
@@ -38,30 +26,27 @@ export async function GET(req: NextRequest) {
     const safeLimit = Number.isFinite(limit) ? limit : 5;
 
     const processingJobs = await listJobsByStatus("processing", safeLimit);
+    const enrollmentService = getAndroidTestEnrollmentService();
 
     const succeededRequestIds: string[] = [];
     const failedRequestIds: string[] = [];
 
     for (const job of processingJobs) {
-      const fail = shouldMockFail(job.requestId);
+      const result = await enrollmentService.enroll(job);
 
-      if (fail) {
+      if (!result.ok) {
         await transitionJobStatus(job.requestId, {
           toStatus: "failed",
-          errorCode: "MOCK_PLAY_API_ERROR",
-          errorMessage: "Mock failure from android-request-completer",
+          errorCode: result.errorCode,
+          errorMessage: result.errorMessage,
         });
         failedRequestIds.push(job.requestId);
         continue;
       }
 
-      const testJoinUrl =
-        process.env.ANDROID_TEST_JOIN_URL ||
-        "https://play.google.com/apps/testing/com.example.resp";
-
       await transitionJobStatus(job.requestId, {
         toStatus: "done",
-        testJoinUrl,
+        testJoinUrl: result.testJoinUrl,
       });
       succeededRequestIds.push(job.requestId);
     }
