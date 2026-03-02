@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { job, reused } = createOrReuseQueuedJob(userId);
+    const { job, reused } = await createOrReuseQueuedJob(userId);
 
     const message = reused
       ? "処理中または受付済みの申請があります。現在の状態をご確認ください。"

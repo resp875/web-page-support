@@ -34,7 +34,7 @@ export async function POST(
     }
 
     const { requestId } = await params;
-    const existing = getJobById(requestId);
+    const existing = await getJobById(requestId);
 
     if (!existing) {
       return NextResponse.json({ message: "対象の申請が見つかりません。" }, { status: 404 });
@@ -54,7 +54,7 @@ export async function POST(
       }
     }
 
-    const updated = transitionJobStatus(requestId, {
+    const updated = await transitionJobStatus(requestId, {
       toStatus: body.toStatus,
       errorCode: body.errorCode,
       errorMessage: body.errorMessage,

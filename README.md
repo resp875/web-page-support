@@ -5,6 +5,29 @@
 - 方針・意思決定ログ: `docs/decision-log.md`
 - 仕様書: `docs/specification.md`
 
+## 無料寄せ構成（推奨初期構成）
+
+- Hosting: Vercel Hobby
+- DB: Neon Free
+- KV: Upstash Redis Free（任意、初期は未導入でも可）
+
+### Neon Free セットアップ
+
+1. Neonでプロジェクトを作成し、接続文字列を取得
+2. `docs/sql/android_test_request_jobs.sql` を実行してテーブルを作成
+3. `.env.local` に `DATABASE_URL` を追加
+
+```env
+DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
+```
+
+4. `npm run dev` を再起動
+
+### 動作モード
+
+- `DATABASE_URL` がある場合: Android申請ジョブはNeonに永続化
+- `DATABASE_URL` がない場合: メモリ保存で動作（開発用フォールバック）
+
 ## はじめに
 
 ### ローカル開発

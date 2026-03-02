@@ -15,7 +15,7 @@ export async function GET(
     }
 
     const { requestId } = await params;
-    const job = getJobById(requestId);
+    const job = await getJobById(requestId);
 
     if (!job) {
       return NextResponse.json({ message: "対象の申請が見つかりません。" }, { status: 404 });

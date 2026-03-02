@@ -76,3 +76,10 @@
 4. **セッション共通処理とジョブストアをライブラリ化**
    - 内容: `src/lib/auth-session.ts`, `src/lib/android-test-request-store.ts` を追加
    - 備考: ジョブ保存は現時点でメモリ実装（次段で永続化予定）
+
+5. **無料寄せ構成での永続化方針を採用**
+   - 内容: Vercel Hobby + Neon Free を基本構成として採用し、Upstash Redisは任意導入とした
+
+6. **Android申請ジョブのNeon永続化を実装**
+   - 内容: `DATABASE_URL` が設定されている場合、ジョブ作成/参照/遷移をNeon(Postgres)へ保存
+   - 補足: `DATABASE_URL` 未設定時は既存メモリストアへフォールバック
