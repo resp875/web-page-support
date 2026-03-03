@@ -1,7 +1,7 @@
 # Resp Support 仕様書
 
-最終更新日: 2026-03-02
-バージョン: v0.9
+最終更新日: 2026-03-04
+バージョン: v1.7
 
 このファイルは、決定・実装した仕様を記録するための仕様書です。  
 今後、仕様の追加・修正があった場合は、必ずこのファイルを更新します。
@@ -83,12 +83,42 @@
 	- `ANDROID_TEST_JOIN_URL` を `done` 時の参加URLとして保存
 	- `ANDROID_MOCK_FORCE_FAIL=true` で全件失敗（モック検証用）
 	- `ANDROID_MOCK_FAIL_SUFFIXES`（カンマ区切り）で requestId 末尾一致の失敗制御が可能
-	- `ANDROID_ENROLLMENT_PROVIDER` で実装プロバイダーを切替（`mock` / `google-play`）
+	- `ANDROID_ENROLLMENT_PROVIDER` で実装プロバイダーを切替（`manual` / `mock` / `google-play`）
 
 実装補足（2026-03-02時点）:
 - Android enrollment処理は抽象化レイヤー経由で呼び出し
 - `mock` プロバイダーは実装済み
-- `google-play` プロバイダーはインターフェースのみ実装（本体未実装）
+
+Google Playプロバイダー実装（2026-03-03時点）:
+- `google-play` プロバイダーでAndroid Publisher APIを呼び出し
+- 処理フロー: OAuth2 JWT認証 -> edit作成 -> testers更新 -> edit commit
+- 必須環境変数:
+	- `GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL`
+	- `GOOGLE_PLAY_PRIVATE_KEY`
+	- `GOOGLE_PLAY_PACKAGE_NAME`
+- 任意環境変数:
+	- `GOOGLE_PLAY_TRACK`（デフォルト: `closed`）
+ - 必須環境変数:
+	- `GOOGLE_PLAY_TESTERS_GROUP`
+
+API制約:
+- Android Publisher API `edits.testers` は `googleGroups` のみ更新可能
+- `googlePlayEmails` の更新はサポート対象外
+
+Googleグループメンバー自動追加（2026-03-04時点）:
+- `GOOGLE_WORKSPACE_ADMIN_EMAIL` が設定されている場合、申請者メール（`requester_email`）を Admin SDK Directory API で `GOOGLE_PLAY_TESTERS_GROUP` に追加する
+- 既存メンバー追加時（HTTP 409）は成功扱いで継続する
+- 自動追加には Google Workspace のドメインワイド委任と、指定管理者ユーザーへの適切な権限付与が必要
+- `GOOGLE_WORKSPACE_ADMIN_EMAIL` 未設定時は、グループ紐付けのみ実行し、メンバー追加は運用手動とする
+
+個人アカウント前提の最小運用（2026-03-04時点）:
+- 基本運用は `ANDROID_ENROLLMENT_PROVIDER=manual` を使用する
+- テスター追加は Play Console のメーリングリスト画面で手動対応する
+- `google-play` / Admin SDK 連携は Google Workspace 管理者運用時のみ任意で利用する
+
+データ要件:
+- 申請者メールアドレス（`requester_email`）をジョブに保存して利用
+- 既存環境は `docs/sql/migrations/20260303_add_requester_email.sql` の適用が必要
 
 補足:
 - `DATABASE_URL` 設定時はNeon(Postgres)へ永続化
@@ -125,6 +155,15 @@
 - 2026-03-02: v0.7 更新（Vercel Cronによる `queued -> processing` 自動遷移を追加）
 - 2026-03-02: v0.8 更新（Vercel Cronによる `processing -> done/failed` 自動遷移を追加、モック失敗制御を追加）
 - 2026-03-02: v0.9 更新（Android enrollment処理を抽象化、`ANDROID_ENROLLMENT_PROVIDER` で実装切替可能に変更）
+- 2026-03-03: v1.0 更新（Google Playプロバイダー本実装、申請者メール保存、DBマイグレーションSQL追加）
+- 2026-03-03: v1.1 更新（Google Play testers確認用デバッグAPIを追加）
+- 2026-03-03: v1.2 更新（Google Play group運用対応、デバッグAPIでgoogleGroups表示とトラック不一致検知を追加）
+- 2026-03-04: v1.3 更新（Google Play testers更新を `googleGroups` のみに統一、API制約を明記）
+- 2026-03-04: v1.4 更新（Google Workspace Admin SDKによるGoogleグループメンバー自動追加を追加）
+- 2026-03-04: v1.4 更新（Google Workspace group member確認用デバッグAPIを追加）
+- 2026-03-04: v1.5 更新（個人アカウント前提の最小運用フローを既定として明記）
+- 2026-03-04: v1.6 更新（Play Console手動追加運用を既定化、`manual` プロバイダーを既定値に変更）
+- 2026-03-04: v1.7 更新（不要となった `google-play` / `google-workspace` デバッグAPIを削除）
 
 ## 8. 次フェーズのタスク予定（作業中断時点）
 

@@ -15,6 +15,7 @@
 
 1. Neonでプロジェクトを作成し、接続文字列を取得
 2. `docs/sql/android_test_request_jobs.sql` を実行してテーブルを作成
+   - 既存テーブルがある場合は `docs/sql/migrations/20260303_add_requester_email.sql` を実行
 3. `.env.local` に `DATABASE_URL` を追加
 
 ```env
@@ -45,7 +46,7 @@ DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 
 ```env
 CRON_SECRET=your_random_long_secret
-ANDROID_ENROLLMENT_PROVIDER=mock
+ANDROID_ENROLLMENT_PROVIDER=manual
 ANDROID_TEST_JOIN_URL=https://play.google.com/apps/testing/com.example.resp
 # 任意: 強制的に失敗させる場合
 # ANDROID_MOCK_FORCE_FAIL=true
@@ -55,8 +56,42 @@ ANDROID_TEST_JOIN_URL=https://play.google.com/apps/testing/com.example.resp
 
 `ANDROID_ENROLLMENT_PROVIDER` は次の値を取ります。
 
-- `mock`（デフォルト）: モック処理で `done/failed` を返す
-- `google-play`: Google Play連携用プロバイダー（現時点では未実装のため失敗応答）
+- `manual`（デフォルト）: 外部APIを呼ばずに完了処理（Play Consoleでの手動テスター追加運用向け）
+- `mock`: `manual` と同等（後方互換）
+- `google-play`: Google Play Developer APIでトラックの `googleGroups` 更新（将来オプション）
+
+個人アカウント最小運用フロー:
+
+1. 申請APIでジョブ受付
+2. Cronで `processing -> done/failed` へ遷移（`manual`）
+3. テスター追加は Play Console のメーリングリスト画面で手動実施
+
+`google-play` プロバイダーを使う場合のみ必要な環境変数（任意）:
+
+```env
+GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL=service-account@project.iam.gserviceaccount.com
+GOOGLE_PLAY_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GOOGLE_PLAY_PACKAGE_NAME=com.example.resp
+# 任意（未指定時は closed）
+GOOGLE_PLAY_TRACK=closed
+# 必須: クローズドテスト用 Google グループ
+GOOGLE_PLAY_TESTERS_GROUP=your-group@googlegroups.com
+```
+
+Google Workspace がある場合のみ使う追加設定（任意）:
+
+```env
+# 設定すると申請時に Directory API でグループメンバー自動追加を試行
+GOOGLE_WORKSPACE_ADMIN_EMAIL=admin@your-domain.com
+```
+
+注意:
+
+- Android Publisher API (`edits.testers`) は `googleGroups` のみサポートします
+- Play Console UI の「メーリングリスト」表示でも、API更新はグループ運用で扱います
+- 個人アカウントのみの場合は `ANDROID_ENROLLMENT_PROVIDER=manual` を使用し、Play Consoleで手動追加してください
+- `GOOGLE_WORKSPACE_ADMIN_EMAIL` を設定した場合は、申請時に Admin SDK で `GOOGLE_PLAY_TESTERS_GROUP` へ申請者メールを自動追加します（既存メンバーはスキップ）
+- 自動追加を使うには Google Workspace 側でサービスアカウントのドメインワイド委任と、管理者ユーザーの権限付与が必要です
 
 `CRON_SECRET` を設定しておくと、Cron APIは `Authorization: Bearer <CRON_SECRET>` を要求します。
 
@@ -64,6 +99,44 @@ ANDROID_TEST_JOIN_URL=https://play.google.com/apps/testing/com.example.resp
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/android-request-processor"
+```
+
+### Cron手動実行時の正常レスポンス目安
+
+#### 1) queued -> processing (`android-request-processor`)
+
+- 対象ジョブあり:
+   - `processedCount` が `1` 以上
+   - `jobs[].status` が `processing`
+   - `message` が「processingに遷移しました」
+
+- 対象ジョブなし:
+   - `processedCount: 0`
+   - `message` が「遷移対象のqueued申請はありませんでした。」
+
+#### 2) processing -> done/failed (`android-request-completer`)
+
+- 対象ジョブあり:
+   - `checkedCount` が `1` 以上
+   - `doneCount` または `failedCount` が `1` 以上
+   - `message` が「processing申請の完了処理を実行しました。」
+
+- 対象ジョブなし:
+   - `checkedCount: 0`
+   - `message` が「処理対象のprocessing申請はありませんでした。」
+
+#### 異常時の目安
+
+- `401 Unauthorized`: `CRON_SECRET` 不一致またはAuthorizationヘッダー不足
+- `500`: 環境変数不足、Google Play API呼び出し失敗、または内部例外
+
+確認SQL例:
+
+```sql
+select request_id, status, requester_email, test_join_url, error_code, updated_at
+from android_test_request_jobs
+order by created_at desc
+limit 5;
 ```
 
 ## はじめに

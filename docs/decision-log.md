@@ -95,3 +95,48 @@
 9. **Android enrollment処理を抽象化レイヤーへ分離**
    - 内容: `src/lib/android-test-enrollment-service.ts` を追加し、Cron完了処理からモック実装を分離
    - 方針: `ANDROID_ENROLLMENT_PROVIDER` で `mock` / `google-play` を切替可能にし、Google Play本実装の差し替えを容易化
+
+### 2026-03-03
+
+1. **Google Playプロバイダー本実装を追加**
+   - 内容: サービスアカウントJWTでアクセストークン取得し、Android Publisher APIの edit/testers/commit を実行
+
+2. **申請者メール保存を追加**
+   - 内容: 申請受付時にセッションからメールを取得し、ジョブへ `requester_email` として保存
+
+3. **既存DB向けマイグレーションSQLを追加**
+   - 内容: `docs/sql/migrations/20260303_add_requester_email.sql` を追加
+   - 目的: 既存環境でもGoogle Play連携に必要なメール列を追加可能にする
+
+4. **Google Play testers確認用の一時デバッグAPIを追加**
+   - 内容: `GET /api/debug/google-play/testers` を追加し、track上の `googlePlayEmails` を直接取得可能にした
+   - セキュリティ: `DEBUG_GOOGLE_PLAY_ENDPOINT=true` で有効化し、Bearer認可を必須化
+
+5. **Google Playテスター更新をgroup運用に対応**
+   - 内容: `GOOGLE_PLAY_TESTERS_MODE`（`email` / `group`）を追加し、group運用時は `GOOGLE_PLAY_TESTERS_GROUP` を更新対象として扱う
+
+6. **デバッグAPIの切り分け精度を改善**
+   - 内容: `googleGroups` も返却し、トラック不一致時は `GOOGLE_TRACK_NOT_FOUND` を返すように変更
+
+### 2026-03-04
+
+1. **Google Play testers更新を `googleGroups` に統一**
+   - 背景: Android Publisher API `edits.testers` が `googlePlayEmails` を受け付けず、`googleGroups` のみ対応のため
+   - 内容: `GOOGLE_PLAY_TESTERS_GROUP` を必須として更新処理を一本化
+
+2. **Googleグループメンバー追加をAdmin SDKで自動化（条件付き）**
+   - 背景: トラックにグループを紐付けるだけでは、申請者が実際にグループメンバーにならないため
+   - 内容: `GOOGLE_WORKSPACE_ADMIN_EMAIL` 設定時に、Directory APIで申請者メールを `GOOGLE_PLAY_TESTERS_GROUP` へ追加
+   - 補足: ドメインワイド委任や管理者権限が未整備の場合に備え、未設定時は従来どおり手動運用を許容
+
+3. **個人アカウント前提では手動メンバー追加を既定運用にする**
+   - 背景: Google Workspace管理者アカウントがない環境では Admin SDK 自動化が利用できないため
+   - 内容: `GOOGLE_WORKSPACE_ADMIN_EMAIL` を未設定にし、Playトラックへのグループ紐付けのみ自動化対象とする
+
+4. **Play Console手動追加運用へ一本化（現時点の標準）**
+   - 背景: 個人アカウント運用ではPlay APIによるグループ紐付け自動化も不要になったため
+   - 内容: `ANDROID_ENROLLMENT_PROVIDER=manual` を既定とし、テスター追加はPlay Consoleのメーリングリスト画面で手動実施する
+
+5. **不要デバッグAPIを削除**
+   - 背景: 運用をPlay Console手動追加へ一本化し、Google API切り分け用エンドポイントが不要になったため
+   - 内容: `google-play` / `google-workspace` 配下のデバッグAPIを削除
