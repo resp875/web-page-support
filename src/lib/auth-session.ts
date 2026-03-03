@@ -57,3 +57,22 @@ export function getUserIdFromSession(session: AuthSession | null): string | null
 
   return null;
 }
+
+export function getUserEmailFromSession(session: AuthSession | null): string | null {
+  if (!session) {
+    return null;
+  }
+
+  if (typeof session.email === "string" && session.email) {
+    return session.email;
+  }
+
+  if (typeof session.id_token === "string") {
+    const payload = decodeJwtPayload(session.id_token);
+    if (payload && typeof payload.email === "string" && payload.email) {
+      return payload.email;
+    }
+  }
+
+  return null;
+}

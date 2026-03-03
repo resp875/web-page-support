@@ -3,6 +3,7 @@ export type AndroidRequestStatus = "queued" | "processing" | "done" | "failed";
 export interface AndroidTestRequestJob {
   requestId: string;
   userId: string;
+  requesterEmail: string | null;
   platform: "android";
   status: AndroidRequestStatus;
   createdAt: string;
@@ -35,6 +36,7 @@ function mapDbRowToJob(row: Record<string, unknown>): AndroidTestRequestJob {
   return {
     requestId: String(row.request_id),
     userId: String(row.user_id),
+    requesterEmail: row.requester_email ? String(row.requester_email) : null,
     platform: "android",
     status: row.status as AndroidRequestStatus,
     createdAt: new Date(String(row.created_at)).toISOString(),
@@ -61,7 +63,7 @@ function canTransition(from: AndroidRequestStatus, to: AndroidRequestStatus): bo
   return false;
 }
 
-export async function createOrReuseQueuedJob(userId: string): Promise<CreateJobResult> {
+export async function createOrReuseQueuedJob(userId: string, requesterEmail: string | null): Promise<CreateJobResult> {
   if (sql) {
     const existingRows = await sql`
       select *
@@ -73,17 +75,46 @@ export async function createOrReuseQueuedJob(userId: string): Promise<CreateJobR
     `;
 
     if (existingRows.length > 0) {
-      return { job: mapDbRowToJob(existingRows[0] as Record<string, unknown>), reused: true };
+      const existing = mapDbRowToJob(existingRows[0] as Record<string, unknown>);
+
+      if (!existing.requesterEmail && requesterEmail) {
+        try {
+          const updatedRows = await sql`
+            update android_test_request_jobs
+            set requester_email = ${requesterEmail}, updated_at = now()
+            where request_id = ${existing.requestId}
+            returning *
+          `;
+
+          if (updatedRows.length > 0) {
+            return { job: mapDbRowToJob(updatedRows[0] as Record<string, unknown>), reused: true };
+          }
+        } catch {
+        }
+      }
+
+      return { job: existing, reused: true };
     }
 
     const requestId = crypto.randomUUID();
 
-    const insertedRows = await sql`
-      insert into android_test_request_jobs
-      (request_id, user_id, platform, status, attempt_count)
-      values (${requestId}, ${userId}, 'android', 'queued', 0)
-      returning *
-    `;
+    let insertedRows: unknown[] = [];
+
+    try {
+      insertedRows = await sql`
+        insert into android_test_request_jobs
+        (request_id, user_id, requester_email, platform, status, attempt_count)
+        values (${requestId}, ${userId}, ${requesterEmail}, 'android', 'queued', 0)
+        returning *
+      `;
+    } catch {
+      insertedRows = await sql`
+        insert into android_test_request_jobs
+        (request_id, user_id, platform, status, attempt_count)
+        values (${requestId}, ${userId}, 'android', 'queued', 0)
+        returning *
+      `;
+    }
 
     return {
       job: mapDbRowToJob(insertedRows[0] as Record<string, unknown>),
@@ -103,6 +134,7 @@ export async function createOrReuseQueuedJob(userId: string): Promise<CreateJobR
   const newJob: AndroidTestRequestJob = {
     requestId,
     userId,
+    requesterEmail,
     platform: "android",
     status: "queued",
     createdAt: timestamp,

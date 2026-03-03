@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOrReuseQueuedJob } from "@/lib/android-test-request-store";
-import { getAuthSessionFromRequest, getUserIdFromSession } from "@/lib/auth-session";
+import { getAuthSessionFromRequest, getUserEmailFromSession, getUserIdFromSession } from "@/lib/auth-session";
 
 export async function POST(req: NextRequest) {
   try {
     const session = getAuthSessionFromRequest(req);
     const userId = getUserIdFromSession(session);
+    const requesterEmail = getUserEmailFromSession(session);
 
     if (!userId) {
       return NextResponse.json(
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { job, reused } = await createOrReuseQueuedJob(userId);
+    const { job, reused } = await createOrReuseQueuedJob(userId, requesterEmail);
 
     const message = reused
       ? "処理中または受付済みの申請があります。現在の状態をご確認ください。"
