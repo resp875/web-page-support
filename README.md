@@ -66,6 +66,19 @@ ANDROID_TEST_JOIN_URL=https://play.google.com/apps/testing/com.example.resp
 2. Cronで `processing -> done/failed` へ遷移（`manual`）
 3. テスター追加は Play Console のメーリングリスト画面で手動実施
 
+`queued` 受付時の担当者通知（任意）:
+
+```env
+# 設定時のみ、queued新規作成時にWebhookへ通知
+ANDROID_REQUEST_NOTIFY_WEBHOOK_URL=https://example.com/hooks/android-request
+# 任意: WebhookのBearer認証
+# ANDROID_REQUEST_NOTIFY_BEARER_TOKEN=your_token
+# 任意: 通知ペイロードに含める運用画面URL
+# ANDROID_REQUEST_ADMIN_PAGE_URL=https://example.com/admin/android-requests
+```
+
+通知は新規受付時（`reused: false`）のみ送信されます。通知失敗時も申請受付は継続されます。
+
 `google-play` プロバイダーを使う場合のみ必要な環境変数（任意）:
 
 ```env

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOrReuseQueuedJob } from "@/lib/android-test-request-store";
 import { getAuthSessionFromRequest, getUserEmailFromSession, getUserIdFromSession } from "@/lib/auth-session";
+import { notifyManualAndroidRequestQueued } from "@/lib/android-request-manual-notifier";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +19,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { job, reused } = await createOrReuseQueuedJob(userId, requesterEmail);
+
+    if (!reused) {
+      try {
+        await notifyManualAndroidRequestQueued(job);
+      } catch (notificationError) {
+        console.error("Manual notify error:", notificationError);
+      }
+    }
 
     const message = reused
       ? "処理中または受付済みの申請があります。現在の状態をご確認ください。"
