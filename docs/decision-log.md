@@ -23,7 +23,7 @@
 
 2. **Androidクローズドテスト申請は非同期処理で実装する（確定）**
    - 方針: フロントは申請受付を実行し、バックエンドで非同期ジョブとして処理
-   - 想定処理: Google Play Developer APIでメーリングリストへメールアドレス追加後、参加URLをユーザーへ連携
+   - 想定処理: `queued -> awaiting_manual -> done/failed` の手動オペレーション待ちキューとして運用する
 
 3. **iOSは初期段階では案内表示のみ（確定）**
    - 方針: まずは参加方法の案内表示を提供し、申請機能は後続フェーズで追加
@@ -140,3 +140,8 @@
 5. **不要デバッグAPIを削除**
    - 背景: 運用をPlay Console手動追加へ一本化し、Google API切り分け用エンドポイントが不要になったため
    - 内容: `google-play` / `google-workspace` 配下のデバッグAPIを削除
+
+6. **手動オペレーション待ちキューへ設計変更**
+   - 背景: 外部API自動連携を前提にしない運用へ切り替えたため
+   - 内容: 状態遷移を `queued -> awaiting_manual -> done/failed` に統一し、Cron processor/completer を廃止
+   - 補足: `queued` 新規受付時はSlack Webhookで担当者通知を送る

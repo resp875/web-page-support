@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MessageCircle, Brain, Layers, ArrowRight } from "lucide-react";
 
 type AuthState = "loading" | "guest" | "member";
+type AndroidRequestStatus = "queued" | "awaiting_manual" | "done" | "failed";
 
 interface User {
   name?: string;
@@ -20,6 +21,50 @@ interface User {
 function LoggedInHome({ user }: { user: User | null }) {
   const [isSubmittingAndroidRequest, setIsSubmittingAndroidRequest] = useState(false);
   const [androidRequestMessage, setAndroidRequestMessage] = useState<string>("");
+  const [androidRequestStatus, setAndroidRequestStatus] = useState<AndroidRequestStatus | null>(null);
+  const [androidRequestId, setAndroidRequestId] = useState<string | null>(null);
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+
+  const statusLabelMap: Record<AndroidRequestStatus, string> = {
+    queued: "受付済み",
+    awaiting_manual: "対応中",
+    done: "完了",
+    failed: "失敗",
+  };
+
+  const refreshAndroidRequestStatus = async (requestId: string) => {
+    setIsRefreshingStatus(true);
+
+    try {
+      const response = await fetch(`/api/closed-test/android-request/${requestId}`, {
+        method: "GET",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setAndroidRequestMessage(data?.message || "申請ステータスの取得に失敗しました。");
+        return;
+      }
+
+      const statusFromApi = data?.status as AndroidRequestStatus | undefined;
+      setAndroidRequestStatus(statusFromApi || null);
+    } catch {
+      setAndroidRequestMessage("申請ステータスの取得に失敗しました。");
+    } finally {
+      setIsRefreshingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    const savedRequestId = window.localStorage.getItem("latestAndroidRequestId");
+    if (!savedRequestId) {
+      return;
+    }
+
+    setAndroidRequestId(savedRequestId);
+    void refreshAndroidRequestStatus(savedRequestId);
+  }, []);
 
   const handleAndroidRequest = async () => {
     if (isSubmittingAndroidRequest) {
@@ -40,12 +85,22 @@ function LoggedInHome({ user }: { user: User | null }) {
       const data = await response.json();
 
       if (!response.ok) {
+        setAndroidRequestStatus(null);
         setAndroidRequestMessage(data?.message || "参加リクエストの送信に失敗しました。時間をおいて再度お試しください。");
         return;
       }
 
-      setAndroidRequestMessage(data?.message || "参加リクエストを受け付けました。処理完了後にご案内します。");
+      const requestIdFromApi = typeof data?.requestId === "string" ? data.requestId : null;
+      if (requestIdFromApi) {
+        setAndroidRequestId(requestIdFromApi);
+        window.localStorage.setItem("latestAndroidRequestId", requestIdFromApi);
+      }
+
+      const statusFromApi = data?.status as AndroidRequestStatus | undefined;
+      setAndroidRequestStatus(statusFromApi || null);
+      setAndroidRequestMessage(data?.message || "参加リクエストを受け付けました。運用担当が手動で対応します。");
     } catch {
+      setAndroidRequestStatus(null);
       setAndroidRequestMessage("参加リクエストの送信に失敗しました。時間をおいて再度お試しください。");
     } finally {
       setIsSubmittingAndroidRequest(false);
@@ -69,7 +124,7 @@ function LoggedInHome({ user }: { user: User | null }) {
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold text-[#0d3b66]">Android クローズドテスト参加申請</h2>
               <p className="mt-2 text-sm text-gray-600">
-                参加リクエストを送信すると、バックエンドで非同期処理を行い、完了後に参加URLを連携します。
+                参加リクエストを送信すると、運用担当が手動でテスター追加を実施します。ステータスは受付後に順次更新されます。
               </p>
               <Button
                 className="mt-5 bg-[#0d3b66] text-white hover:bg-[#155a91]"
@@ -80,6 +135,23 @@ function LoggedInHome({ user }: { user: User | null }) {
               </Button>
               {androidRequestMessage && (
                 <p className="mt-3 text-sm text-gray-700">{androidRequestMessage}</p>
+              )}
+              {androidRequestStatus && (
+                <p className="mt-2 text-sm text-gray-700">
+                  現在のステータス: <span className="font-semibold">{statusLabelMap[androidRequestStatus]}</span>
+                </p>
+              )}
+              {androidRequestId && (
+                <div className="mt-3">
+                  <Button
+                    variant="outline"
+                    className="border-[#0d3b66] text-[#0d3b66] hover:bg-[#e6f0fa]"
+                    onClick={() => void refreshAndroidRequestStatus(androidRequestId)}
+                    disabled={isRefreshingStatus}
+                  >
+                    {isRefreshingStatus ? "更新中..." : "ステータスを再取得"}
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>

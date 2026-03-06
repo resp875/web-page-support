@@ -1,7 +1,7 @@
 # Resp Support 仕様書
 
-最終更新日: 2026-03-04
-バージョン: v1.7
+最終更新日: 2026-03-06
+バージョン: v1.8
 
 このファイルは、決定・実装した仕様を記録するための仕様書です。  
 今後、仕様の追加・修正があった場合は、必ずこのファイルを更新します。
@@ -49,9 +49,8 @@
 ## 3. Androidクローズドテスト申請仕様（初期方針）
 
 - フロントエンドは「申請受付」を実行する
-- バックエンドで非同期処理を行う
-- バックエンド処理ではGoogle Play Developer APIを利用し、対象メーリングリストへメールアドレスを追加する
-- 処理完了後、ユーザーへテスト参加URLを連携する
+- バックエンドは「受付・重複防止・状態管理・監査」を担当する
+- テスター追加（Play Console操作）は運用担当が手動で実施する
 
 注記:
 - 詳細なAPI仕様（入力値、レスポンス、状態遷移、リトライ、失敗時挙動）は後続で定義・追記する
@@ -67,23 +66,14 @@
 ジョブ管理API実装（2026-03-02時点）:
 - 申請受付: `POST /api/closed-test/android-request`
 	- 新規受付時: `202`（`status: queued`）
-	- 同一ユーザーに `queued/processing` が存在する場合: `200`（既存ジョブ再利用、`reused: true`）
+	- 同一ユーザーに `queued/awaiting_manual` が存在する場合: `200`（既存ジョブ再利用、`reused: true`）
 - ステータス参照: `GET /api/closed-test/android-request/:requestId`
 	- 申請ユーザー本人のみ参照可能
 - 状態遷移: `POST /api/closed-test/android-request/:requestId/transition`
-	- 許可遷移: `queued -> processing -> done/failed`
+	- 許可遷移: `queued -> awaiting_manual -> done/failed`
 	- 不正遷移: `409`
-	- 本人更新または `x-job-admin-key`（`JOB_ADMIN_KEY`一致）で更新可能
-- Cron自動遷移: `GET /api/cron/android-request-processor`
-	- `queued` を最大5件ずつ `processing` へ遷移（デフォルト）
-	- `limit` クエリで件数上限変更可（1〜20）
-	- `CRON_SECRET` 設定時は `Authorization: Bearer <CRON_SECRET>` を要求
-- Cron完了処理: `GET /api/cron/android-request-completer`
-	- `processing` を最大5件ずつ `done/failed` へ遷移（デフォルト）
-	- `ANDROID_TEST_JOIN_URL` を `done` 時の参加URLとして保存
-	- `ANDROID_MOCK_FORCE_FAIL=true` で全件失敗（モック検証用）
-	- `ANDROID_MOCK_FAIL_SUFFIXES`（カンマ区切り）で requestId 末尾一致の失敗制御が可能
-	- `ANDROID_ENROLLMENT_PROVIDER` で実装プロバイダーを切替（`manual` / `mock` / `google-play`）
+	- `x-job-admin-key`（`JOB_ADMIN_KEY`一致）の管理者のみ更新可能
+- Cronエンドポイント: 廃止（`410 Gone`）
 
 実装補足（2026-03-02時点）:
 - Android enrollment処理は抽象化レイヤー経由で呼び出し
@@ -111,10 +101,10 @@ Googleグループメンバー自動追加（2026-03-04時点）:
 - 自動追加には Google Workspace のドメインワイド委任と、指定管理者ユーザーへの適切な権限付与が必要
 - `GOOGLE_WORKSPACE_ADMIN_EMAIL` 未設定時は、グループ紐付けのみ実行し、メンバー追加は運用手動とする
 
-個人アカウント前提の最小運用（2026-03-04時点）:
+個人アカウント前提の最小運用（2026-03-06時点）:
 - 基本運用は `ANDROID_ENROLLMENT_PROVIDER=manual` を使用する
 - テスター追加は Play Console のメーリングリスト画面で手動対応する
-- `google-play` / Admin SDK 連携は Google Workspace 管理者運用時のみ任意で利用する
+- `queued` 新規受付時は Slack Incoming Webhookへ通知し、運用担当へ連携する
 
 データ要件:
 - 申請者メールアドレス（`requester_email`）をジョブに保存して利用
@@ -164,21 +154,21 @@ Googleグループメンバー自動追加（2026-03-04時点）:
 - 2026-03-04: v1.5 更新（個人アカウント前提の最小運用フローを既定として明記）
 - 2026-03-04: v1.6 更新（Play Console手動追加運用を既定化、`manual` プロバイダーを既定値に変更）
 - 2026-03-04: v1.7 更新（不要となった `google-play` / `google-workspace` デバッグAPIを削除）
+- 2026-03-06: v1.8 更新（手動オペレーション待ちキュー: `queued -> awaiting_manual -> done/failed` に変更、Cron廃止）
 
 ## 8. 次フェーズのタスク予定（作業中断時点）
 
 ### 8.1 Android申請ジョブ管理API（優先）
 
 目的:
-- `queued -> processing -> done/failed` の状態遷移を管理できるようにする
+- `queued -> awaiting_manual -> done/failed` の状態遷移を管理できるようにする
 
 予定タスク:
 - データモデル定義（例: `requestId`, `userId`, `platform`, `status`, `errorCode`, `createdAt`, `updatedAt`）
 - 受付APIの保存処理追加（`POST /api/closed-test/android-request`）
 - ステータス参照API追加（例: `GET /api/closed-test/android-request/:requestId`）
-- ワーカー処理/バッチ処理のI/F定義（ジョブ取得・ロック・更新）
-- 失敗時リトライ方針（最大試行回数、間隔、最終失敗条件）
-- 冪等性方針（同一ユーザーの重複申請をどう扱うか）
+- 管理者向け状態更新の運用UI整備
+- 監査ログ項目の強化
 
 ### 8.2 Google Play Developer API連携
 
@@ -191,7 +181,7 @@ Googleグループメンバー自動追加（2026-03-04時点）:
 ### 8.3 ログイン後画面の拡張
 
 予定タスク:
-- Android申請の処理状態をUI表示（queued/processing/done/failed）
+- Android申請の処理状態をUI表示（queued/awaiting_manual/done/failed）
 - マニュアルコンテンツ実データ化
 - 開発イベント情報の実データ化
 

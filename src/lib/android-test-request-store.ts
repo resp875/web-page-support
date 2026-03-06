@@ -1,4 +1,4 @@
-export type AndroidRequestStatus = "queued" | "processing" | "done" | "failed";
+export type AndroidRequestStatus = "queued" | "awaiting_manual" | "done" | "failed";
 
 export interface AndroidTestRequestJob {
   requestId: string;
@@ -52,11 +52,11 @@ function mapDbRowToJob(row: Record<string, unknown>): AndroidTestRequestJob {
 }
 
 function canTransition(from: AndroidRequestStatus, to: AndroidRequestStatus): boolean {
-  if (from === "queued" && to === "processing") {
+  if (from === "queued" && to === "awaiting_manual") {
     return true;
   }
 
-  if (from === "processing" && (to === "done" || to === "failed")) {
+  if (from === "awaiting_manual" && (to === "done" || to === "failed")) {
     return true;
   }
 
@@ -69,7 +69,7 @@ export async function createOrReuseQueuedJob(userId: string, requesterEmail: str
       select *
       from android_test_request_jobs
       where user_id = ${userId}
-        and status in ('queued', 'processing')
+        and status in ('queued', 'awaiting_manual', 'processing')
       order by created_at desc
       limit 1
     `;
@@ -123,7 +123,7 @@ export async function createOrReuseQueuedJob(userId: string, requesterEmail: str
   }
 
   for (const job of jobStore.values()) {
-    if (job.userId === userId && (job.status === "queued" || job.status === "processing")) {
+    if (job.userId === userId && (job.status === "queued" || job.status === "awaiting_manual")) {
       return { job, reused: true };
     }
   }
@@ -216,7 +216,7 @@ export async function claimQueuedJobsForProcessing(limit: number): Promise<Andro
       )
       update android_test_request_jobs jobs
       set
-        status = 'processing',
+        status = 'awaiting_manual',
         updated_at = now(),
         processing_started_at = now(),
         attempt_count = jobs.attempt_count + 1,
@@ -244,7 +244,7 @@ export async function claimQueuedJobsForProcessing(limit: number): Promise<Andro
     const timestamp = nowIso();
     const updated: AndroidTestRequestJob = {
       ...job,
-      status: "processing",
+      status: "awaiting_manual",
       updatedAt: timestamp,
       processingStartedAt: timestamp,
       attemptCount: job.attemptCount + 1,
@@ -284,11 +284,11 @@ export async function transitionJobStatus(requestId: string, input: TransitionIn
         status = ${input.toStatus},
         updated_at = now(),
         processing_started_at = case
-          when ${input.toStatus} = 'processing' then now()
+          when ${input.toStatus} = 'awaiting_manual' then now()
           else processing_started_at
         end,
         attempt_count = case
-          when ${input.toStatus} = 'processing' then attempt_count + 1
+          when ${input.toStatus} = 'awaiting_manual' then attempt_count + 1
           else attempt_count
         end,
         completed_at = case
@@ -301,12 +301,12 @@ export async function transitionJobStatus(requestId: string, input: TransitionIn
         end,
         error_code = case
           when ${input.toStatus} = 'failed' then ${input.errorCode ?? "UNEXPECTED_ERROR"}
-          when ${input.toStatus} in ('processing', 'done') then null
+          when ${input.toStatus} in ('awaiting_manual', 'done') then null
           else error_code
         end,
         error_message = case
           when ${input.toStatus} = 'failed' then ${input.errorMessage ?? "Unknown error"}
-          when ${input.toStatus} in ('processing', 'done') then null
+          when ${input.toStatus} in ('awaiting_manual', 'done') then null
           else error_message
         end,
         test_join_url = case
@@ -337,7 +337,7 @@ export async function transitionJobStatus(requestId: string, input: TransitionIn
     updatedAt: timestamp,
   };
 
-  if (input.toStatus === "processing") {
+  if (input.toStatus === "awaiting_manual") {
     updated.processingStartedAt = timestamp;
     updated.attemptCount = existing.attemptCount + 1;
     updated.errorCode = null;

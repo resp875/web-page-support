@@ -4,7 +4,6 @@ import {
   getJobById,
   transitionJobStatus,
 } from "@/lib/android-test-request-store";
-import { getAuthSessionFromRequest, getUserIdFromSession } from "@/lib/auth-session";
 
 interface TransitionBody {
   toStatus?: AndroidRequestStatus;
@@ -40,18 +39,11 @@ export async function POST(
       return NextResponse.json({ message: "対象の申請が見つかりません。" }, { status: 404 });
     }
 
-    const admin = isAdminRequest(req);
-    if (!admin) {
-      const session = getAuthSessionFromRequest(req);
-      const userId = getUserIdFromSession(session);
-
-      if (!userId) {
-        return NextResponse.json({ message: "ログインが必要です。" }, { status: 401 });
-      }
-
-      if (existing.userId !== userId) {
-        return NextResponse.json({ message: "この申請の更新権限がありません。" }, { status: 403 });
-      }
+    if (!isAdminRequest(req)) {
+      return NextResponse.json(
+        { message: "この操作は管理者のみ実行できます。x-job-admin-key を指定してください。" },
+        { status: 403 },
+      );
     }
 
     const updated = await transitionJobStatus(requestId, {
@@ -76,7 +68,7 @@ export async function POST(
   } catch (error) {
     if (error instanceof Error && error.message === "INVALID_TRANSITION") {
       return NextResponse.json(
-        { message: "不正な状態遷移です。queued->processing->done/failed の順序で更新してください。" },
+        { message: "不正な状態遷移です。queued->awaiting_manual->done/failed の順序で更新してください。" },
         { status: 409 },
       );
     }

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const message = reused
       ? "処理中または受付済みの申請があります。現在の状態をご確認ください。"
-      : "Androidクローズドテストの参加リクエストを受け付けました。処理完了後に参加URLをご案内します。";
+      : "Androidクローズドテストの参加リクエストを受け付けました。運用担当が手動対応し、状態を更新します。";
 
     return NextResponse.json(
       {

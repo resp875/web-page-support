@@ -29,18 +29,15 @@ DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 - `DATABASE_URL` がある場合: Android申請ジョブはNeonに永続化
 - `DATABASE_URL` がない場合: メモリ保存で動作（開発用フォールバック）
 
-### queued -> processing の自動遷移（Vercel Cron）
+### 手動オペレーション待ちキューフロー
 
-- 設定ファイル: `vercel.json`
-- 実行API: `GET /api/cron/android-request-processor`
-- 実行間隔: `*/3 * * * *`（3分ごと）
+- ステータス遷移: `queued -> awaiting_manual -> done/failed`
+- `queued`: 申請受付直後
+- `awaiting_manual`: 運用担当が手動対応中
+- `done`: 手動対応完了
+- `failed`: 手動対応失敗
 
-### processing -> done/failed の自動遷移（Vercel Cron）
-
-- 設定ファイル: `vercel.json`
-- 実行API: `GET /api/cron/android-request-completer`
-- 実行間隔: `*/3 * * * *`（3分ごと）
-- 現時点ではGoogle Play連携はモック実装
+`queued` から先の状態更新は管理者APIで実施します。
 
 推奨設定:
 
@@ -48,6 +45,7 @@ DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 CRON_SECRET=your_random_long_secret
 ANDROID_ENROLLMENT_PROVIDER=manual
 ANDROID_TEST_JOIN_URL=https://play.google.com/apps/testing/com.example.resp
+JOB_ADMIN_KEY=your_admin_key
 # 任意: 強制的に失敗させる場合
 # ANDROID_MOCK_FORCE_FAIL=true
 # 任意: requestIdの末尾が一致する場合に失敗させる（カンマ区切り）
@@ -60,11 +58,72 @@ ANDROID_TEST_JOIN_URL=https://play.google.com/apps/testing/com.example.resp
 - `mock`: `manual` と同等（後方互換）
 - `google-play`: Google Play Developer APIでトラックの `googleGroups` 更新（将来オプション）
 
+管理者ステータス更新API:
+
+- エンドポイント: `POST /api/closed-test/android-request/:requestId/transition`
+- 認可: `x-job-admin-key: <JOB_ADMIN_KEY>`
+
+実行手順（`queued -> awaiting_manual`）:
+
+1. ユーザーの申請受付レスポンス、またはDBから `requestId` を取得
+2. `x-job-admin-key` ヘッダーに `JOB_ADMIN_KEY` を設定して transition API を実行
+3. レスポンスの `status` が `awaiting_manual` になっていることを確認
+
+`requestId` をDBから取得する例:
+
+```sql
+select request_id, status, requester_email, created_at
+from android_test_request_jobs
+where status = 'queued'
+order by created_at desc
+limit 5;
+```
+
+`queued -> awaiting_manual`:
+
+```bash
+curl -X POST \
+   -H "Content-Type: application/json" \
+   -H "x-job-admin-key: $JOB_ADMIN_KEY" \
+   -d '{"toStatus":"awaiting_manual"}' \
+   "http://localhost:3000/api/closed-test/android-request/<requestId>/transition"
+```
+
+成功時レスポンス例:
+
+```json
+{
+   "requestId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+   "status": "awaiting_manual",
+   "updatedAt": "2026-03-06T12:34:56.000Z"
+}
+```
+
+`awaiting_manual -> done`:
+
+```bash
+curl -X POST \
+   -H "Content-Type: application/json" \
+   -H "x-job-admin-key: $JOB_ADMIN_KEY" \
+   -d '{"toStatus":"done"}' \
+   "http://localhost:3000/api/closed-test/android-request/<requestId>/transition"
+```
+
+`awaiting_manual -> failed`:
+
+```bash
+curl -X POST \
+   -H "Content-Type: application/json" \
+   -H "x-job-admin-key: $JOB_ADMIN_KEY" \
+   -d '{"toStatus":"failed","errorCode":"MANUAL_OPERATION_FAILED","errorMessage":"manual operation failed"}' \
+   "http://localhost:3000/api/closed-test/android-request/<requestId>/transition"
+```
+
 個人アカウント最小運用フロー:
 
-1. 申請APIでジョブ受付
-2. Cronで `processing -> done/failed` へ遷移（`manual`）
-3. テスター追加は Play Console のメーリングリスト画面で手動実施
+1. 申請APIでジョブ受付（`queued`）
+2. Slack通知を受けた運用担当が Play Console で手動対応
+3. 管理者APIで `awaiting_manual` / `done` / `failed` を更新
 
 `queued` 受付時の担当者通知（任意）:
 
@@ -106,42 +165,10 @@ GOOGLE_WORKSPACE_ADMIN_EMAIL=admin@your-domain.com
 - `GOOGLE_WORKSPACE_ADMIN_EMAIL` を設定した場合は、申請時に Admin SDK で `GOOGLE_PLAY_TESTERS_GROUP` へ申請者メールを自動追加します（既存メンバーはスキップ）
 - 自動追加を使うには Google Workspace 側でサービスアカウントのドメインワイド委任と、管理者ユーザーの権限付与が必要です
 
-`CRON_SECRET` を設定しておくと、Cron APIは `Authorization: Bearer <CRON_SECRET>` を要求します。
+### Cronについて
 
-ローカル確認例:
-
-```bash
-curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/android-request-processor"
-```
-
-### Cron手動実行時の正常レスポンス目安
-
-#### 1) queued -> processing (`android-request-processor`)
-
-- 対象ジョブあり:
-   - `processedCount` が `1` 以上
-   - `jobs[].status` が `processing`
-   - `message` が「processingに遷移しました」
-
-- 対象ジョブなし:
-   - `processedCount: 0`
-   - `message` が「遷移対象のqueued申請はありませんでした。」
-
-#### 2) processing -> done/failed (`android-request-completer`)
-
-- 対象ジョブあり:
-   - `checkedCount` が `1` 以上
-   - `doneCount` または `failedCount` が `1` 以上
-   - `message` が「processing申請の完了処理を実行しました。」
-
-- 対象ジョブなし:
-   - `checkedCount: 0`
-   - `message` が「処理対象のprocessing申請はありませんでした。」
-
-#### 異常時の目安
-
-- `401 Unauthorized`: `CRON_SECRET` 不一致またはAuthorizationヘッダー不足
-- `500`: 環境変数不足、Google Play API呼び出し失敗、または内部例外
+- `android-request-processor` / `android-request-completer` は廃止済みです（`410 Gone` を返します）
+- `vercel.json` の Cron 設定は空配列にしています
 
 確認SQL例:
 
