@@ -6,6 +6,8 @@
 - 仕様書: `docs/specification.md`
 - 運用Runbook: `docs/operation-runbook.md`
 - 監査ログ活用指標: `docs/monitoring-metrics.md`
+- 週次モニタリングレポート（テンプレート）: `docs/weekly-monitoring-report-template.md`
+- 閾値超過インシデント記録（テンプレート）: `docs/monitoring-incident-template.md`
 - E2Eチェックリスト: `docs/e2e-checklist.md`
 
 ## 無料寄せ構成（推奨初期構成）

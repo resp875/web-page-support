@@ -166,6 +166,14 @@
    - 背景: プレースホルダー表示のままだと、参加ユーザーが次アクションを取りにくいため
    - 内容: `src/lib/member-content.ts` にコンテンツデータを定義し、`/api/content/manuals` と `/api/content/events` を介してトップページへ表示
 
+13. **週次モニタリング運用テンプレートを追加**
+   - 背景: KPI確認と閾値超過時の対応記録を運用者間で標準化するため
+   - 内容: `docs/weekly-monitoring-report-template.md` と `docs/monitoring-incident-template.md` を追加し、Runbookに連携
+
+14. **iOS対応検討（8.3）は一旦スキップ**
+   - 背景: 現時点はAndroid手動運用の品質安定化を優先するため
+   - 内容: 次フェーズでは 8.1/8.2 の継続改善を先行し、iOS方針決定は後続へ延期
+
 9. **仕様書の次フェーズタスクを未完了項目へ整理**
    - 背景: 実装済み項目が「次フェーズ」に残り、運用上の優先順位が読み取りづらくなっていたため
    - 内容: `docs/specification.md` の次フェーズを現状の未完了タスクへ更新

@@ -63,6 +63,7 @@ limit 50;
 
 1. 集計の実行
 - `docs/monitoring-metrics.md` のSQLを上から順に実行する
+- レポートは `docs/weekly-monitoring-report-template.md` を複製して記録する
 
 2. KPI判定
 - 完了率: 95%以上
@@ -72,4 +73,5 @@ limit 50;
 
 3. 異常時アクション
 - 閾値超過があれば、対象requestを監査ログで追跡し、当日中に `done/failed` まで更新する
-- 原因と対策を `docs/decision-log.md` へ追記する
+- `docs/monitoring-incident-template.md` を使って原因と再発防止策を記録する
+- 重要判断は `docs/decision-log.md` へ追記する
