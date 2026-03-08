@@ -12,6 +12,24 @@ import { MessageCircle, Brain, Layers, ArrowRight } from "lucide-react";
 type AuthState = "loading" | "guest" | "member";
 type AndroidRequestStatus = "queued" | "awaiting_manual" | "done" | "failed";
 
+interface ManualContentItem {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  updatedAt: string;
+}
+
+interface EventContentItem {
+  id: string;
+  title: string;
+  summary: string;
+  startsAt: string;
+  format: "online" | "onsite";
+  location: string;
+  href: string;
+}
+
 interface User {
   name?: string;
   picture?: string;
@@ -25,6 +43,9 @@ function LoggedInHome({ user }: { user: User | null }) {
   const [androidRequestId, setAndroidRequestId] = useState<string | null>(null);
   const [androidRequestUpdatedAt, setAndroidRequestUpdatedAt] = useState<string | null>(null);
   const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+  const [manualItems, setManualItems] = useState<ManualContentItem[]>([]);
+  const [eventItems, setEventItems] = useState<EventContentItem[]>([]);
+  const [isLoadingMemberContent, setIsLoadingMemberContent] = useState(true);
 
   const statusLabelMap: Record<AndroidRequestStatus, string> = {
     queued: "受付済み",
@@ -74,6 +95,66 @@ function LoggedInHome({ user }: { user: User | null }) {
     setAndroidRequestId(savedRequestId);
     void refreshAndroidRequestStatus(savedRequestId);
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchMemberContent = async () => {
+      setIsLoadingMemberContent(true);
+
+      try {
+        const [manualsResponse, eventsResponse] = await Promise.all([
+          fetch("/api/content/manuals", { method: "GET" }),
+          fetch("/api/content/events", { method: "GET" }),
+        ]);
+
+        const manualsData = await manualsResponse.json();
+        const eventsData = await eventsResponse.json();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setManualItems(Array.isArray(manualsData?.manuals) ? manualsData.manuals : []);
+        setEventItems(Array.isArray(eventsData?.events) ? eventsData.events : []);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setManualItems([]);
+        setEventItems([]);
+      } finally {
+        if (isMounted) {
+          setIsLoadingMemberContent(false);
+        }
+      }
+    };
+
+    void fetchMemberContent();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const formatDate = (value: string) => {
+    return new Date(value).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  };
+
+  const formatDateTime = (value: string) => {
+    return new Date(value).toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const handleAndroidRequest = async () => {
     if (isSubmittingAndroidRequest) {
@@ -199,11 +280,29 @@ function LoggedInHome({ user }: { user: User | null }) {
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold text-[#0d3b66]">操作マニュアル</h2>
               <p className="mt-2 text-sm text-gray-600">Respアプリの詳しい操作手順を確認できます。</p>
-              <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-700">
-                <li>アカウント初期設定（準備中）</li>
-                <li>議論の開始方法（準備中）</li>
-                <li>リアクション・評価機能の使い方（準備中）</li>
-              </ul>
+              {isLoadingMemberContent ? (
+                <p className="mt-4 text-sm text-gray-600">読み込み中...</p>
+              ) : manualItems.length === 0 ? (
+                <p className="mt-4 text-sm text-gray-600">現在公開中のマニュアルはありません。</p>
+              ) : (
+                <ul className="mt-4 space-y-3 text-sm text-gray-700">
+                  {manualItems.map((item) => (
+                    <li key={item.id} className="rounded-md border border-[#d4e5f5] bg-[#f8fbff] p-3">
+                      <p className="font-semibold text-[#0d3b66]">{item.title}</p>
+                      <p className="mt-1 text-xs text-gray-700">{item.description}</p>
+                      <p className="mt-1 text-xs text-[#275f90]">最終更新: {formatDate(item.updatedAt)}</p>
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block text-xs font-semibold text-[#0d3b66] underline"
+                      >
+                        マニュアルを見る
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
 
@@ -211,10 +310,30 @@ function LoggedInHome({ user }: { user: User | null }) {
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold text-[#0d3b66]">開発イベント情報</h2>
               <p className="mt-2 text-sm text-gray-600">アップデート情報やイベント予定を確認できます。</p>
-              <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-700">
-                <li>次回アップデート告知（準備中）</li>
-                <li>ユーザーフィードバック会（準備中）</li>
-              </ul>
+              {isLoadingMemberContent ? (
+                <p className="mt-4 text-sm text-gray-600">読み込み中...</p>
+              ) : eventItems.length === 0 ? (
+                <p className="mt-4 text-sm text-gray-600">現在公開中のイベントはありません。</p>
+              ) : (
+                <ul className="mt-4 space-y-3 text-sm text-gray-700">
+                  {eventItems.map((item) => (
+                    <li key={item.id} className="rounded-md border border-[#d4e5f5] bg-[#f8fbff] p-3">
+                      <p className="font-semibold text-[#0d3b66]">{item.title}</p>
+                      <p className="mt-1 text-xs text-gray-700">{item.summary}</p>
+                      <p className="mt-1 text-xs text-[#275f90]">開催: {formatDateTime(item.startsAt)}</p>
+                      <p className="mt-1 text-xs text-[#275f90]">形式: {item.format === "online" ? "オンライン" : "オフライン"} / {item.location}</p>
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block text-xs font-semibold text-[#0d3b66] underline"
+                      >
+                        詳細を見る
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>

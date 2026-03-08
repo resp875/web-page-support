@@ -40,6 +40,12 @@ DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 - `done`: 手動対応完了
 - `failed`: 手動対応失敗
 
+### ログイン後コンテンツ（実データ表示）
+
+- 操作マニュアル: `GET /api/content/manuals`
+- 開発イベント情報: `GET /api/content/events`
+- データ定義: `src/lib/member-content.ts`
+
 `queued` から先の状態更新は管理者APIで実施します。
 
 推奨設定:
