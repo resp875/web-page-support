@@ -23,6 +23,7 @@ function LoggedInHome({ user }: { user: User | null }) {
   const [androidRequestMessage, setAndroidRequestMessage] = useState<string>("");
   const [androidRequestStatus, setAndroidRequestStatus] = useState<AndroidRequestStatus | null>(null);
   const [androidRequestId, setAndroidRequestId] = useState<string | null>(null);
+  const [androidRequestUpdatedAt, setAndroidRequestUpdatedAt] = useState<string | null>(null);
   const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
 
   const statusLabelMap: Record<AndroidRequestStatus, string> = {
@@ -30,6 +31,13 @@ function LoggedInHome({ user }: { user: User | null }) {
     awaiting_manual: "対応中",
     done: "完了",
     failed: "失敗",
+  };
+
+  const statusDescriptionMap: Record<AndroidRequestStatus, string> = {
+    queued: "申請を受け付けました。担当者への通知を送信済みです。",
+    awaiting_manual: "担当者が Play Console で手動対応中です。完了までしばらくお待ちください。",
+    done: "手続きが完了しました。クローズドテスト参加の準備ができています。",
+    failed: "手続きに失敗しました。時間をおいて再申請いただくか、お問い合わせください。",
   };
 
   const refreshAndroidRequestStatus = async (requestId: string) => {
@@ -49,6 +57,7 @@ function LoggedInHome({ user }: { user: User | null }) {
 
       const statusFromApi = data?.status as AndroidRequestStatus | undefined;
       setAndroidRequestStatus(statusFromApi || null);
+      setAndroidRequestUpdatedAt(typeof data?.updatedAt === "string" ? data.updatedAt : null);
     } catch {
       setAndroidRequestMessage("申請ステータスの取得に失敗しました。");
     } finally {
@@ -98,6 +107,7 @@ function LoggedInHome({ user }: { user: User | null }) {
 
       const statusFromApi = data?.status as AndroidRequestStatus | undefined;
       setAndroidRequestStatus(statusFromApi || null);
+      setAndroidRequestUpdatedAt(typeof data?.updatedAt === "string" ? data.updatedAt : null);
       setAndroidRequestMessage(data?.message || "参加リクエストを受け付けました。運用担当が手動で対応します。");
     } catch {
       setAndroidRequestStatus(null);
@@ -137,9 +147,17 @@ function LoggedInHome({ user }: { user: User | null }) {
                 <p className="mt-3 text-sm text-gray-700">{androidRequestMessage}</p>
               )}
               {androidRequestStatus && (
-                <p className="mt-2 text-sm text-gray-700">
-                  現在のステータス: <span className="font-semibold">{statusLabelMap[androidRequestStatus]}</span>
-                </p>
+                <div className="mt-2 rounded-md bg-[#eef5fb] p-3 text-sm text-[#0d3b66]">
+                  <p>
+                    現在のステータス: <span className="font-semibold">{statusLabelMap[androidRequestStatus]}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-[#275f90]">{statusDescriptionMap[androidRequestStatus]}</p>
+                  {androidRequestUpdatedAt && (
+                    <p className="mt-1 text-xs text-[#275f90]">
+                      最終更新: {new Date(androidRequestUpdatedAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
               )}
               {androidRequestId && (
                 <div className="mt-3">
@@ -152,6 +170,15 @@ function LoggedInHome({ user }: { user: User | null }) {
                     {isRefreshingStatus ? "更新中..." : "ステータスを再取得"}
                   </Button>
                 </div>
+              )}
+              {androidRequestStatus === "failed" && (
+                <p className="mt-3 text-sm text-gray-700">
+                  再申請を行うか、
+                  <a href="mailto:respwork11+support@gmail.com" className="text-[#0d3b66] underline">
+                    サポート窓口
+                  </a>
+                  へご連絡ください。
+                </p>
               )}
             </CardContent>
           </Card>
