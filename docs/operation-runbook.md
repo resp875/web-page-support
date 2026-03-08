@@ -58,3 +58,18 @@ from android_test_request_audit_logs
 order by created_at desc
 limit 50;
 ```
+
+## 6. 週次モニタリング運用
+
+1. 集計の実行
+- `docs/monitoring-metrics.md` のSQLを上から順に実行する
+
+2. KPI判定
+- 完了率: 95%以上
+- 失敗率: 10%以下
+- P90滞留時間: 48時間以内
+- 48時間超の未処理滞留: 0件
+
+3. 異常時アクション
+- 閾値超過があれば、対象requestを監査ログで追跡し、当日中に `done/failed` まで更新する
+- 原因と対策を `docs/decision-log.md` へ追記する

@@ -5,6 +5,7 @@
 - 方針・意思決定ログ: `docs/decision-log.md`
 - 仕様書: `docs/specification.md`
 - 運用Runbook: `docs/operation-runbook.md`
+- 監査ログ活用指標: `docs/monitoring-metrics.md`
 - E2Eチェックリスト: `docs/e2e-checklist.md`
 
 ## 無料寄せ構成（推奨初期構成）
