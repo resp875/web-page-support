@@ -4,6 +4,7 @@
 
 - 方針・意思決定ログ: `docs/decision-log.md`
 - 仕様書: `docs/specification.md`
+- 運用Runbook: `docs/operation-runbook.md`
 
 ## 無料寄せ構成（推奨初期構成）
 
@@ -15,7 +16,7 @@
 
 1. Neonでプロジェクトを作成し、接続文字列を取得
 2. `docs/sql/android_test_request_jobs.sql` を実行してテーブルを作成
-   - 既存テーブルがある場合は `docs/sql/migrations/20260303_add_requester_email.sql` を実行
+   - 既存テーブルがある場合は `docs/sql/migrations/20260303_add_requester_email.sql` と `docs/sql/migrations/20260306_status_to_awaiting_manual.sql` と `docs/sql/migrations/20260308_add_request_audit_logs.sql` を実行
 3. `.env.local` に `DATABASE_URL` を追加
 
 ```env
@@ -62,6 +63,13 @@ JOB_ADMIN_KEY=your_admin_key
 
 - エンドポイント: `POST /api/closed-test/android-request/:requestId/transition`
 - 認可: `x-job-admin-key: <JOB_ADMIN_KEY>`
+- 監査ログ: 遷移ごとに `android_test_request_audit_logs` へ保存
+
+管理者UI（推奨）:
+
+- 画面: `GET /admin/android-requests`
+- 機能: 一覧確認、`queued -> awaiting_manual -> done/failed` 更新、監査ログ表示
+- 初回アクセス時に `JOB_ADMIN_KEY` を入力して利用
 
 実行手順（`queued -> awaiting_manual`）:
 

@@ -1,7 +1,7 @@
 # Resp Support 仕様書
 
-最終更新日: 2026-03-06
-バージョン: v1.8
+最終更新日: 2026-03-08
+バージョン: v1.9
 
 このファイルは、決定・実装した仕様を記録するための仕様書です。  
 今後、仕様の追加・修正があった場合は、必ずこのファイルを更新します。
@@ -73,6 +73,10 @@
 	- 許可遷移: `queued -> awaiting_manual -> done/failed`
 	- 不正遷移: `409`
 	- `x-job-admin-key`（`JOB_ADMIN_KEY`一致）の管理者のみ更新可能
+- 管理者一覧: `GET /api/admin/android-requests`
+	- `x-job-admin-key`（`JOB_ADMIN_KEY`一致）の管理者のみ参照可能
+- 監査ログ参照: `GET /api/admin/android-requests/:requestId/audit`
+	- `x-job-admin-key`（`JOB_ADMIN_KEY`一致）の管理者のみ参照可能
 - Cronエンドポイント: 廃止（`410 Gone`）
 
 実装補足（2026-03-02時点）:
@@ -109,6 +113,8 @@ Googleグループメンバー自動追加（2026-03-04時点）:
 データ要件:
 - 申請者メールアドレス（`requester_email`）をジョブに保存して利用
 - 既存環境は `docs/sql/migrations/20260303_add_requester_email.sql` の適用が必要
+- 状態遷移監査ログ（`android_test_request_audit_logs`）を保存
+- 既存環境は `docs/sql/migrations/20260308_add_request_audit_logs.sql` の適用が必要
 
 補足:
 - `DATABASE_URL` 設定時はNeon(Postgres)へ永続化
@@ -155,6 +161,7 @@ Googleグループメンバー自動追加（2026-03-04時点）:
 - 2026-03-04: v1.6 更新（Play Console手動追加運用を既定化、`manual` プロバイダーを既定値に変更）
 - 2026-03-04: v1.7 更新（不要となった `google-play` / `google-workspace` デバッグAPIを削除）
 - 2026-03-06: v1.8 更新（手動オペレーション待ちキュー: `queued -> awaiting_manual -> done/failed` に変更、Cron廃止）
+- 2026-03-08: v1.9 更新（管理者ダッシュボードと監査ログ保存/参照APIを追加）
 
 ## 8. 次フェーズのタスク予定（作業中断時点）
 

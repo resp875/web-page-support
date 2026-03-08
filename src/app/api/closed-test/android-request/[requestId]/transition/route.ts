@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import {
   AndroidRequestStatus,
   getJobById,
   transitionJobStatus,
 } from "@/lib/android-test-request-store";
+import { createAuditLog } from "@/lib/android-test-request-audit-store";
 
 interface TransitionBody {
   toStatus?: AndroidRequestStatus;
@@ -20,6 +22,11 @@ function isAdminRequest(req: NextRequest): boolean {
 
   const requestKey = req.headers.get("x-job-admin-key");
   return requestKey === adminKey;
+}
+
+function getAdminActorId(req: NextRequest): string {
+  const requestKey = req.headers.get("x-job-admin-key") || "";
+  return createHash("sha256").update(requestKey).digest("hex").slice(0, 12);
 }
 
 export async function POST(
@@ -52,6 +59,22 @@ export async function POST(
       errorMessage: body.errorMessage,
       testJoinUrl: body.testJoinUrl,
     });
+
+    try {
+      await createAuditLog({
+        requestId,
+        fromStatus: existing.status,
+        toStatus: updated.status,
+        actorType: "admin_key",
+        actorId: getAdminActorId(req),
+        metadata: {
+          errorCode: body.errorCode ?? null,
+          hasErrorMessage: Boolean(body.errorMessage),
+        },
+      });
+    } catch (auditError) {
+      console.error("Android request audit log error:", auditError);
+    }
 
     return NextResponse.json({
       requestId: updated.requestId,

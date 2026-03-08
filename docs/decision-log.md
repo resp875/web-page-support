@@ -145,3 +145,11 @@
    - 背景: 外部API自動連携を前提にしない運用へ切り替えたため
    - 内容: 状態遷移を `queued -> awaiting_manual -> done/failed` に統一し、Cron processor/completer を廃止
    - 補足: `queued` 新規受付時はSlack Webhookで担当者通知を送る
+
+7. **管理者ダッシュボードを追加**
+   - 背景: `curl` ベース運用ではヒューマンエラーが起きやすいため
+   - 内容: `/admin/android-requests` で申請一覧表示、状態更新、監査ログ確認を可能にした
+
+8. **状態遷移の監査ログを保存**
+   - 背景: 運用トレーサビリティ（誰がいつ更新したか）を担保するため
+   - 内容: `android_test_request_audit_logs` を追加し、transition API実行時に記録
