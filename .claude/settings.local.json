@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(cp /Users/yushi/repository/respProject/web-page-support/manual/captures/Android_インストール/Screenshot_20260521-115515.png /Users/yushi/repository/respProject/web-page-support/public/manual/android-install/step01.png)",
+      "Bash(cp /Users/yushi/repository/respProject/web-page-support/manual/captures/Android_インストール/Screenshot_20260521-115521.png /Users/yushi/repository/respProject/web-page-support/public/manual/android-install/step02.png)",
+      "Bash(cp /Users/yushi/repository/respProject/web-page-support/manual/captures/Android_インストール/Screenshot_20260521-115528.png /Users/yushi/repository/respProject/web-page-support/public/manual/android-install/step03.png)",
+      "Bash(cp /Users/yushi/repository/respProject/web-page-support/manual/captures/Android_インストール/Screenshot_20260521-115534.png /Users/yushi/repository/respProject/web-page-support/public/manual/android-install/step04.png)",
+      "Bash(cp /Users/yushi/repository/respProject/web-page-support/manual/captures/Android_インストール/Screenshot_20260521-115550.png /Users/yushi/repository/respProject/web-page-support/public/manual/android-install/step05.png)"
+    ]
+  }
+}

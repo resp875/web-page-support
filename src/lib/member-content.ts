@@ -18,25 +18,18 @@ export interface EventContentItem {
 
 export const manualContentItems: ManualContentItem[] = [
   {
-    id: "manual-account-setup",
-    title: "アカウント初期設定ガイド",
-    description: "プロフィール編集、通知設定、基本設定を最初に完了する手順です。",
-    href: "https://support.resp.example/manuals/account-setup",
-    updatedAt: "2026-03-05T09:00:00+09:00",
+    id: "manual-android-install",
+    title: "Androidインストールガイド",
+    description: "Google Play ストアからRespをインストールする手順を説明します。",
+    href: "/manual/android-install",
+    updatedAt: "2026-03-17T09:00:00+09:00",
   },
   {
-    id: "manual-discussion-start",
-    title: "議論の開始とトピック作成",
-    description: "新しい議論を立てるときのテンプレートと進行のコツをまとめています。",
-    href: "https://support.resp.example/manuals/discussion-start",
-    updatedAt: "2026-03-06T10:30:00+09:00",
-  },
-  {
-    id: "manual-reaction-review",
-    title: "リアクションと評価機能の使い方",
-    description: "リアクション、評価、振り返り機能を活用して議論の質を上げる方法です。",
-    href: "https://support.resp.example/manuals/reaction-review",
-    updatedAt: "2026-03-07T14:15:00+09:00",
+    id: "manual-android-tutorial",
+    title: "アプリ基本操作チュートリアル",
+    description: "ログインからはじめて議論を立てるまでの基本的な操作方法を解説します。",
+    href: "/manual/android-tutorial",
+    updatedAt: "2026-03-17T09:00:00+09:00",
   },
 ]
 

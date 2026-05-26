@@ -293,8 +293,6 @@ function LoggedInHome({ user }: { user: User | null }) {
                       <p className="mt-1 text-xs text-[#275f90]">最終更新: {formatDate(item.updatedAt)}</p>
                       <a
                         href={item.href}
-                        target="_blank"
-                        rel="noreferrer"
                         className="mt-2 inline-block text-xs font-semibold text-[#0d3b66] underline"
                       >
                         マニュアルを見る
