@@ -211,6 +211,16 @@ npm run dev
 
 ブラウザで [http://localhost:3000](http://localhost:3000) を開いて結果を確認してください。
 
+#### 画像を差し替えたときのキャッシュクリア
+
+`public/` 以下の画像を差し替えた場合、Next.js のキャッシュが残っていると変更が反映されないことがあります。その場合は `.next` ディレクトリを削除してから再起動してください：
+
+```bash
+rm -rf .next && npm run dev
+```
+
+`npm run preview`（Cloudflare Workers 環境）は毎回フルビルドするため、キャッシュクリアは不要です。
+
 ### Cloudflare Workersでのプレビュー
 
 Cloudflare Workers環境でアプリをローカルテストします：
