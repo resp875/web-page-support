@@ -6,8 +6,8 @@
 - 仕様書: `docs/specification.md`
 - 運用Runbook: `docs/operation-runbook.md`
 - 監査ログ活用指標: `docs/monitoring-metrics.md`
-- 週次モニタリングレポート（テンプレート）: `docs/weekly-monitoring-report-template.md`
-- 週次モニタリングレポート（初回実測）: `docs/weekly-monitoring-report-2026-03-08.md`
+- 週次モニタリングレポート（テンプレート）: `docs/weekly-monitoring-reports/weekly-monitoring-report-template.md`
+- 週次モニタリングレポート（初回実測）: `docs/weekly-monitoring-reports/weekly-monitoring-report-2026-03-08.md`
 - 閾値超過インシデント記録（テンプレート）: `docs/monitoring-incident-template.md`
 - 集計補助スクリプト: `scripts/generate-weekly-metrics.mjs`
 - E2Eチェックリスト: `docs/e2e-checklist.md`

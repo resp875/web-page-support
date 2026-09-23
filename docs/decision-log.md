@@ -168,7 +168,7 @@
 
 13. **週次モニタリング運用テンプレートを追加**
    - 背景: KPI確認と閾値超過時の対応記録を運用者間で標準化するため
-   - 内容: `docs/weekly-monitoring-report-template.md` と `docs/monitoring-incident-template.md` を追加し、Runbookに連携
+   - 内容: `docs/weekly-monitoring-reports/weekly-monitoring-report-template.md` と `docs/monitoring-incident-template.md` を追加し、Runbookに連携
 
 14. **iOS対応検討（8.3）は一旦スキップ**
    - 背景: 現時点はAndroid手動運用の品質安定化を優先するため
@@ -176,7 +176,7 @@
 
 15. **週次モニタリング初回実測（2週間）を実施**
    - 背景: 指標定義だけでなく、実データで運用品質を確認するため
-   - 内容: `docs/weekly-monitoring-report-2026-03-08.md` を作成し、完了率・失敗率・滞留時間・滞留件数を記録
+   - 内容: `docs/weekly-monitoring-reports/weekly-monitoring-report-2026-03-08.md` を作成し、完了率・失敗率・滞留時間・滞留件数を記録
 
 9. **仕様書の次フェーズタスクを未完了項目へ整理**
    - 背景: 実装済み項目が「次フェーズ」に残り、運用上の優先順位が読み取りづらくなっていたため

@@ -40,4 +40,4 @@
 
 - 指標定義: `docs/monitoring-metrics.md`
 - Runbook: `docs/operation-runbook.md`
-- テンプレート: `docs/weekly-monitoring-report-template.md`
+- テンプレート: `docs/weekly-monitoring-reports/weekly-monitoring-report-template.md`

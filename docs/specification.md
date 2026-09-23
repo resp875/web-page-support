@@ -176,7 +176,7 @@ Googleグループメンバー自動追加（2026-03-04時点）:
 完了タスク:
 - 監査ログの活用指標定義（`docs/monitoring-metrics.md`）
 - 閾値超過時の再発防止テンプレート整備（`docs/monitoring-incident-template.md`）
-- 週次モニタリング運用の初回実測（2週間分）（`docs/weekly-monitoring-report-2026-03-08.md`）
+- 週次モニタリング運用の初回実測（2週間分）（`docs/weekly-monitoring-reports/weekly-monitoring-report-2026-03-08.md`）
 
 予定タスク:
 - 初回実測結果の振り返りと閾値見直し

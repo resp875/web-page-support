@@ -63,7 +63,7 @@ limit 50;
 
 1. 集計の実行
 - `docs/monitoring-metrics.md` のSQLを上から順に実行する
-- レポートは `docs/weekly-monitoring-report-template.md` を複製して記録する
+- レポートは `docs/weekly-monitoring-reports/weekly-monitoring-report-template.md` を複製して記録する
 - ローカル集計補助として `node scripts/generate-weekly-metrics.mjs` でも直近2週間のKPIを取得できる
 
 2. KPI判定
