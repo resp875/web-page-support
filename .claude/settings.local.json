@@ -8,5 +8,8 @@
       "Bash(cp /Users/yushi/repository/respProject/web-page-support/manual/captures/Android_インストール/Screenshot_20260521-115534.png /Users/yushi/repository/respProject/web-page-support/public/manual/android-install/step04.png)",
       "Bash(cp /Users/yushi/repository/respProject/web-page-support/manual/captures/Android_インストール/Screenshot_20260521-115550.png /Users/yushi/repository/respProject/web-page-support/public/manual/android-install/step05.png)"
     ]
+  },
+  "enabledPlugins": {
+    "serena@claude-plugins-official": false
   }
 }
