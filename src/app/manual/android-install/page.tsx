@@ -80,8 +80,8 @@ export default function AndroidInstallPage() {
         <div className="mt-12 rounded-lg bg-[#eef5fb] p-5">
           <p className="text-sm text-[#0d3b66]">
             インストールが完了したら、次は
-            <Link href="/manual/android-tutorial" className="mx-1 font-semibold underline hover:text-[#155a91]">
-              アプリ基本操作チュートリアル
+            <Link href="/manual/app-guide" className="mx-1 font-semibold underline hover:text-[#155a91]">
+              アプリ操作ガイド
             </Link>
             をご覧ください。
           </p>

@@ -25,11 +25,12 @@ export const manualContentItems: ManualContentItem[] = [
     updatedAt: "2026-03-17T09:00:00+09:00",
   },
   {
-    id: "manual-android-tutorial",
-    title: "アプリ基本操作チュートリアル",
-    description: "ログインからはじめて議論を立てるまでの基本的な操作方法を解説します。",
-    href: "/manual/android-tutorial",
-    updatedAt: "2026-03-17T09:00:00+09:00",
+    id: "manual-app-guide",
+    title: "アプリ操作ガイド",
+    description:
+      "アカウント作成から、ツリーの見方、発言・リクエスト・投げ銭、ポートフォリオまで、アプリの使い方を画面つきで説明します(Android・iOS共通)。",
+    href: "/manual/app-guide",
+    updatedAt: "2026-09-29T09:00:00+09:00",
   },
 ]
 
