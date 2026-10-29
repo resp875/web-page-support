@@ -35,22 +35,22 @@ export const manualContentItems: ManualContentItem[] = [
 ]
 
 export const eventContentItems: EventContentItem[] = [
-  {
-    id: "event-weekly-release-note",
-    title: "週次アップデート共有会",
-    summary: "直近の変更点と次週リリース予定を開発チームが共有します。",
-    startsAt: "2026-03-12T19:30:00+09:00",
-    format: "online",
-    location: "Google Meet",
-    href: "https://support.resp.example/events/weekly-release-note",
-  },
-  {
-    id: "event-feedback-session",
-    title: "ユーザーフィードバック会",
-    summary: "クローズドテスト参加者の意見を収集し、優先改善項目を決定します。",
-    startsAt: "2026-03-19T20:00:00+09:00",
-    format: "online",
-    location: "Zoom",
-    href: "https://support.resp.example/events/feedback-session",
-  },
+  // {
+  //   id: "event-weekly-release-note",
+  //   title: "週次アップデート共有会",
+  //   summary: "直近の変更点と次週リリース予定を開発チームが共有します。",
+  //   startsAt: "2026-03-12T19:30:00+09:00",
+  //   format: "online",
+  //   location: "Google Meet",
+  //   href: "https://support.resp.example/events/weekly-release-note",
+  // },
+  // {
+  //   id: "event-feedback-session",
+  //   title: "ユーザーフィードバック会",
+  //   summary: "クローズドテスト参加者の意見を収集し、優先改善項目を決定します。",
+  //   startsAt: "2026-03-19T20:00:00+09:00",
+  //   format: "online",
+  //   location: "Zoom",
+  //   href: "https://support.resp.example/events/feedback-session",
+  // },
 ]
