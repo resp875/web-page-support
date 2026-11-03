@@ -4,6 +4,15 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/manual/android-tutorial", // Android専用だった旧チュートリアル。OS共通の操作ガイドに統合した
+        destination: "/manual/app-guide",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {
