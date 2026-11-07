@@ -47,3 +47,5 @@ wrangler-dist/
 
 # local env files
 *.vars
+# Serena(開発支援ツール)のキャッシュ・設定
+/.serena/
