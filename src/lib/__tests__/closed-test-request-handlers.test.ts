@@ -8,17 +8,24 @@ import {
 } from "../closed-test-request-handlers";
 import { createOrReuseQueuedJob, getJobById } from "../android-test-request-store";
 import { listAuditLogsByRequestId } from "../android-test-request-audit-store";
+import { SESSION_COOKIE_NAME, createSessionToken } from "../auth-session";
 
 // DATABASE_URL 未設定のため in-memory フォールバックで動作する
 
 const ADMIN_KEY = "test-admin-key";
+const SESSION_SECRET = "0123456789abcdef0123456789abcdef";
+
+/** AUTH0_SECRET で署名したセッショントークン(本番の callback と同じ形式) */
+function signSession(user: { sub: string; email?: string }): Promise<string> {
+  return createSessionToken(user, SESSION_SECRET);
+}
 
 function makeRequest(
-  options: { session?: Record<string, unknown>; adminKey?: string; body?: unknown } = {},
+  options: { session?: string; adminKey?: string; body?: unknown } = {},
 ): NextRequest {
   const headers = new Headers();
   if (options.session) {
-    headers.set("cookie", `auth_session=${encodeURIComponent(JSON.stringify(options.session))}`);
+    headers.set("cookie", `${SESSION_COOKIE_NAME}=${encodeURIComponent(options.session)}`);
   }
   if (options.adminKey) {
     headers.set("x-job-admin-key", options.adminKey);
@@ -40,6 +47,7 @@ function newUserId() {
 
 beforeEach(() => {
   vi.stubEnv("JOB_ADMIN_KEY", ADMIN_KEY);
+  vi.stubEnv("AUTH0_SECRET", SESSION_SECRET);
   // 通知 webhook は未設定にして外部送信しない
   vi.stubEnv("ANDROID_REQUEST_NOTIFY_WEBHOOK_URL", "");
 });
@@ -69,10 +77,22 @@ describe("handleCreateRequest", () => {
     expect(res.status).toBe(401);
   });
 
+  it("細工した平文 JSON の Cookie では他人として申請できず 401", async () => {
+    const forged = JSON.stringify({ sub: newUserId(), email: "victim@example.com" });
+    const res = await handleCreateRequest(makeRequest({ session: forged, body: {} }), "ios");
+    expect(res.status).toBe(401);
+  });
+
+  it("別の secret で署名したセッションは 401", async () => {
+    const token = await createSessionToken({ sub: newUserId() }, "fedcba9876543210fedcba9876543210");
+    const res = await handleCreateRequest(makeRequest({ session: token, body: {} }), "ios");
+    expect(res.status).toBe(401);
+  });
+
   it("iOS の新規申請は 202 で、ios のジョブがメールアドレス付きで作られる", async () => {
     const userId = newUserId();
     const res = await handleCreateRequest(
-      makeRequest({ session: { sub: userId, email: "ios-user@example.com" }, body: {} }),
+      makeRequest({ session: await signSession({ sub: userId, email: "ios-user@example.com" }), body: {} }),
       "ios",
     );
     const data = await res.json();
@@ -90,7 +110,7 @@ describe("handleCreateRequest", () => {
 
   it("Android の新規申請メッセージは Android 向けの文言", async () => {
     const res = await handleCreateRequest(
-      makeRequest({ session: { sub: newUserId() }, body: {} }),
+      makeRequest({ session: await signSession({ sub: newUserId() }), body: {} }),
       "android",
     );
     const data = await res.json();
@@ -101,7 +121,7 @@ describe("handleCreateRequest", () => {
   });
 
   it("同じプラットフォームで再申請すると 200 で既存ジョブを返す", async () => {
-    const session = { sub: newUserId() };
+    const session = await signSession({ sub: newUserId() });
     const first = await (await handleCreateRequest(makeRequest({ session, body: {} }), "ios")).json();
     const res = await handleCreateRequest(makeRequest({ session, body: {} }), "ios");
     const second = await res.json();
@@ -119,27 +139,35 @@ describe("handleGetRequest", () => {
   });
 
   it("存在しない申請は 404", async () => {
-    const res = await handleGetRequest(makeRequest({ session: { sub: newUserId() } }), "missing", "ios");
+    const res = await handleGetRequest(makeRequest({ session: await signSession({ sub: newUserId() }) }), "missing", "ios");
     expect(res.status).toBe(404);
+  });
+
+  it("細工した Cookie で他人の申請は参照できない (401)", async () => {
+    const victimId = newUserId();
+    const { job } = await createOrReuseQueuedJob(victimId, "victim@example.com", "ios");
+    const forged = JSON.stringify({ sub: victimId });
+    const res = await handleGetRequest(makeRequest({ session: forged }), job.requestId, "ios");
+    expect(res.status).toBe(401);
   });
 
   it("他人の申請は 403", async () => {
     const { job } = await createOrReuseQueuedJob(newUserId(), null, "ios");
-    const res = await handleGetRequest(makeRequest({ session: { sub: newUserId() } }), job.requestId, "ios");
+    const res = await handleGetRequest(makeRequest({ session: await signSession({ sub: newUserId() }) }), job.requestId, "ios");
     expect(res.status).toBe(403);
   });
 
   it("別プラットフォームのルートから参照すると 404", async () => {
     const userId = newUserId();
     const { job } = await createOrReuseQueuedJob(userId, null, "android");
-    const res = await handleGetRequest(makeRequest({ session: { sub: userId } }), job.requestId, "ios");
+    const res = await handleGetRequest(makeRequest({ session: await signSession({ sub: userId }) }), job.requestId, "ios");
     expect(res.status).toBe(404);
   });
 
   it("本人の申請はステータスを返す", async () => {
     const userId = newUserId();
     const { job } = await createOrReuseQueuedJob(userId, null, "ios");
-    const res = await handleGetRequest(makeRequest({ session: { sub: userId } }), job.requestId, "ios");
+    const res = await handleGetRequest(makeRequest({ session: await signSession({ sub: userId }) }), job.requestId, "ios");
     const data = await res.json();
 
     expect(res.status).toBe(200);

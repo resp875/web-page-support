@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_SECONDS,
+  createSessionToken,
+  userFromIdToken,
+} from '@/lib/auth-session';
 
 function getEnvVar(name: string): string {
   const value = process.env[name];
@@ -76,7 +82,7 @@ export async function GET(
       
       const response = NextResponse.redirect(logoutUrl);
       // Clear session cookie
-      response.cookies.delete('auth_session');
+      response.cookies.delete(SESSION_COOKIE_NAME);
       
       return response;
     }
@@ -122,16 +128,25 @@ export async function GET(
       }
       
       const tokens = await tokenResponse.json();
-      
-      // Create session and redirect
-      const response = NextResponse.redirect(new URL(returnTo, baseUrl));
-      
-      // Store tokens in httpOnly cookie (simple implementation)
-      response.cookies.set('auth_session', JSON.stringify(tokens), {
+      const user = userFromIdToken(tokens.id_token, { clientId, issuer: `https://${domain}/` });
+      if (!user) {
+        console.error('Invalid id_token from token endpoint');
+        return NextResponse.json({ error: 'Invalid id_token' }, { status: 500 });
+      }
+
+      // AUTH0_SECRET で署名したセッションを発行する(Auth0 のトークン自体は保存しない)
+      const sessionToken = await createSessionToken(user, getEnvVar('AUTH0_SECRET'));
+
+      // returnTo は自サイト内のパスに限定する(オープンリダイレクト防止)
+      const redirectUrl = new URL(returnTo, baseUrl);
+      const safeRedirect = redirectUrl.origin === new URL(baseUrl).origin ? redirectUrl : new URL('/', baseUrl);
+      const response = NextResponse.redirect(safeRedirect);
+
+      response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
         httpOnly: true,
         secure: isSecureCookie,
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: SESSION_MAX_AGE_SECONDS,
       });
       
       // Clear temporary cookies
