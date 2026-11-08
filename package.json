@@ -6,11 +6,13 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview --port 8787",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "deploy": "opennextjs-cloudflare build && node scripts/check-bundled-env.mjs && opennextjs-cloudflare deploy && node scripts/verify-prod-auth.mjs",
+    "upload": "opennextjs-cloudflare build && node scripts/check-bundled-env.mjs && opennextjs-cloudflare upload",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:bundled-env": "node scripts/check-bundled-env.mjs",
+    "verify:prod-auth": "node scripts/verify-prod-auth.mjs"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.15.0",
