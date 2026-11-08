@@ -14,6 +14,22 @@ export const REQUIRED_PRODUCTION_KEYS = [
 
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "::1"]);
 
+const SENSITIVE_SEGMENTS = new Set(["KEY", "SECRET", "TOKEN", "PASSWORD", "PASS", "CREDENTIALS"]);
+
+/**
+ * 名前から秘密情報らしいキーかを判定する。
+ * `NEXT_PUBLIC_*` はクライアントに配る前提なので対象外。接続文字列や Webhook URL は値自体が秘密なので対象。
+ */
+export function isSensitiveKeyName(key) {
+  if (key.startsWith("NEXT_PUBLIC_")) {
+    return false;
+  }
+  if (key === "DATABASE_URL" || key.endsWith("_WEBHOOK_URL")) {
+    return true;
+  }
+  return key.split("_").some((segment) => SENSITIVE_SEGMENTS.has(segment));
+}
+
 /** URL っぽい値のホストがローカルを指しているか */
 export function isLocalhostValue(value) {
   if (typeof value !== "string" || value === "") {
@@ -87,6 +103,8 @@ export function evaluateBundledEnv({ bundled, configuredKeys, requiredKeys = REQ
   return {
     missingRequired: requiredKeys.filter((key) => !configured.has(key)),
     localhostOnlyInBundle: bundleOnly.filter((key) => isLocalhostValue(bundled[key])),
+    // 本番で使っていなくても、同梱されるだけで Worker のコードに秘密の値が残る
+    sensitiveOnlyInBundle: bundleOnly.filter(isSensitiveKeyName),
     bundleOnly,
   };
 }

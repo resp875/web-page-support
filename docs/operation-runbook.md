@@ -103,6 +103,9 @@ limit 50;
   - `AUTH0_DOMAIN` / `AUTH0_CLIENT_ID` / `AUTH0_CLIENT_SECRET` / `AUTH0_SECRET` / `AUTH0_APP_BASE_URL`
   - `DATABASE_URL` / `JOB_ADMIN_KEY`
 - `AUTH0_APP_BASE_URL` の本番値は `https://support.resp.work`(末尾スラッシュなし)。
+- 任意の secret: `ANDROID_REQUEST_NOTIFY_WEBHOOK_URL`(Slack 通知)、`ANDROID_REQUEST_NOTIFY_BEARER_TOKEN`。
+- 秘密でない値は `wrangler.jsonc` の `vars` に書く(例: `ANDROID_REQUEST_ADMIN_PAGE_URL`)。
+- 本番で使っていない秘密の値(`GOOGLE_PLAY_*`、`CRON_SECRET` など)は `.env.local` に置かない。置くと、使っていなくても Worker のコードに同梱される。
 
 ### 7.2 secret の設定手順
 
@@ -123,6 +126,7 @@ limit 50;
 2. `scripts/check-bundled-env.mjs`(デプロイ前)
    - 本番必須のキーが secret / vars に未登録なら中止する。
    - `.env` から同梱された localhost の値が、上書きされずに本番へ入る場合も中止する。
+   - 秘密情報らしい名前(`*_KEY` / `*_SECRET` / `*_TOKEN` / `DATABASE_URL` / `*_WEBHOOK_URL` など)の値が、secret で上書きされずに同梱される場合も中止する。
    - secret / vars に無く `.env` の値で動くキーは、警告として表示する。
    - 出力はキー名のみで、値は表示しない。
 3. `opennextjs-cloudflare deploy`
