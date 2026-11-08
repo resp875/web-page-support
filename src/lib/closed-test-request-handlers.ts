@@ -8,7 +8,7 @@ import {
   transitionJobStatus,
 } from "@/lib/android-test-request-store";
 import { createAuditLog } from "@/lib/android-test-request-audit-store";
-import { getAuthSessionFromRequest, getUserEmailFromSession, getUserIdFromSession } from "@/lib/auth-session";
+import { getSessionUserFromRequest } from "@/lib/auth-session";
 import { notifyManualTestRequestQueued } from "@/lib/android-request-manual-notifier";
 
 // Android / iOS のテスト参加申請APIで共通の処理。
@@ -41,9 +41,9 @@ function getAdminActorId(req: NextRequest): string {
 
 export async function handleCreateRequest(req: NextRequest, platform: TestRequestPlatform): Promise<NextResponse> {
   try {
-    const session = getAuthSessionFromRequest(req);
-    const userId = getUserIdFromSession(session);
-    const requesterEmail = getUserEmailFromSession(session);
+    const user = await getSessionUserFromRequest(req);
+    const userId = user?.sub ?? null;
+    const requesterEmail = user?.email ?? null;
 
     if (!userId) {
       return NextResponse.json({ message: "ログイン済みユーザーのみ申請できます。" }, { status: 401 });
@@ -89,8 +89,8 @@ export async function handleGetRequest(
   platform: TestRequestPlatform,
 ): Promise<NextResponse> {
   try {
-    const session = getAuthSessionFromRequest(req);
-    const userId = getUserIdFromSession(session);
+    const user = await getSessionUserFromRequest(req);
+    const userId = user?.sub ?? null;
 
     if (!userId) {
       return NextResponse.json({ message: "ログインが必要です。" }, { status: 401 });

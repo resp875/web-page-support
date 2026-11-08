@@ -225,3 +225,14 @@
 4. **公開リポジトリの git 履歴に本番の Auth0 の秘密情報が残っていることが判明**
    - 内容: `3ef66a5` でコミットされた `.dev.vars` に、本番アプリの `AUTH0_CLIENT_SECRET` / `AUTH0_SECRET` が含まれていた（`69d65ac` で削除済みだが履歴に残る）。リポジトリは公開されている。
    - 対応（2026-11-08 完了）: Auth0 で client secret をローテーションし、`AUTH0_SECRET` も再生成して、secret と `.env.local` を更新した。新しい secret で本番にログインできることを確認した。履歴の書き換えは、ローテーション後は効果が薄く破壊的なので行わない。
+
+5. **セッション Cookie を署名付きにし、なりすましを防止**
+   - 背景: `auth_session` に Auth0 のトークンを平文 JSON で保存し、`src/lib/auth-session.ts` が Cookie の `sub` や id_token の中身を検証せずに信用していた。そのため Cookie を細工すれば、任意のユーザーとして申請・参照できた。
+   - 内容:
+     - callback で id_token の `aud` / `iss` / `exp` を確認し、`sub` / `email` / `name` / `picture` を取り出す。これらを `AUTH0_SECRET` で HS256 署名した JWT（有効期限 7 日、`jose` を使用）として Cookie に保存する。Auth0 のトークン自体は保存しない。
+     - 読み取り側（申請 API、`/api/auth/me`、`/manual/*` の認可）は、すべて署名と有効期限を検証する。`/api/auth/me` は Auth0 の userinfo を呼ばず、セッションの内容を返す。
+     - callback の `returnTo` を自サイト内に限定した（オープンリダイレクト防止）。
+   - 影響:
+     - ユーザー ID は従来どおり `sub` なので、既存の申請との紐づけは変わらない。
+     - 旧形式の Cookie は無効になるため、ログイン中のユーザーは再ログインが必要になる。
+     - `AUTH0_SECRET` を変更すると全員がログアウトされる。

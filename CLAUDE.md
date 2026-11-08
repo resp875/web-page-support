@@ -58,7 +58,7 @@ Deprecated endpoints (`/api/cron/*`) return 410 Gone.
 
 ### Authentication
 
-Auth0 integration via `src/lib/auth0.ts` (singleton `Auth0Client`). Session stored as HTTPOnly cookie `auth_session`. Session extraction: `src/lib/auth-session.ts`.
+Auth0 login is a custom OAuth2 code flow in `src/app/api/auth/[...auth0]/route.ts` (the `@auth0/nextjs-auth0` middleware doesn't run on Workers; `src/lib/auth0.ts` / `src/proxy.disabled.ts` are unused). On callback it reads `sub`/`email`/`name`/`picture` from the id_token (checking `aud`/`iss`/`exp`) and stores them as an `AUTH0_SECRET`-signed HS256 JWT in the HTTPOnly cookie `auth_session` (7 days); Auth0 tokens themselves are not stored. Always read the user via `getSessionUserFromRequest` / `verifySessionToken` in `src/lib/auth-session.ts` — never trust the raw cookie. `AUTH0_SECRET` must be ≥32 chars; rotating it logs everyone out.
 
 Admin APIs authenticate via `x-job-admin-key` header matching `JOB_ADMIN_KEY` env var.
 
@@ -77,7 +77,7 @@ Admin APIs authenticate via `x-job-admin-key` header matching `JOB_ADMIN_KEY` en
 ## Key Documentation
 
 All docs are in `docs/` (written in Japanese):
-- `docs/specification.md` — Full API spec (v1.16)
+- `docs/specification.md` — Full API spec (v1.17)
 - `docs/decision-log.md` — Architecture decisions with rationale
 - `docs/operation-runbook.md` — Operator procedures
 - `docs/monitoring-metrics.md` — KPI definitions
