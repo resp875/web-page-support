@@ -266,19 +266,26 @@ Next.jsについて詳しく学ぶには、以下のリソースをご覧くだ�
    npx wrangler r2 bucket create cache
    ```
 
-3. **環境変数を設定**:
+3. **環境変数を設定**(手元のターミナルで実行。値は対話入力):
    ```bash
    npx wrangler secret put AUTH0_DOMAIN
    npx wrangler secret put AUTH0_CLIENT_ID
    npx wrangler secret put AUTH0_CLIENT_SECRET
    npx wrangler secret put AUTH0_SECRET
-   npx wrangler secret put AUTH0_APP_BASE_URL
+   npx wrangler secret put AUTH0_APP_BASE_URL   # https://support.resp.work(末尾スラッシュなし)
+   npx wrangler secret put DATABASE_URL
+   npx wrangler secret put JOB_ADMIN_KEY
    ```
+
+   > ⚠ 本番の値は必ず secret か `wrangler.jsonc` の `vars` に置いてください。デプロイ時、手元の `.env.local` は Worker に同梱されます。そのため secret が無いキーには `.env.local` の開発用の値(`http://localhost:3000` など)がそのまま本番で使われます。
+   > Claude Code の `!` から `secret put` を実行すると、入力を受け取れず空の値が登録されます。
+   > 詳細は `docs/operation-runbook.md` §7 を参照してください。
 
 4. **本番環境にデプロイ**:
    ```bash
    npm run deploy
    ```
+   ビルドの後、デプロイ前のチェック(`scripts/check-bundled-env.mjs`)が実行されます。デプロイ後には、本番ログインの戻り先を確認するチェック(`scripts/verify-prod-auth.mjs`)も自動で実行されます。secret だけを更新した場合は、`npm run verify:prod-auth` で確認してください。
 
 ### デプロイの更新
 

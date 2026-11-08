@@ -1,6 +1,6 @@
 # Androidクローズドテスト手動運用 Runbook
 
-最終更新日: 2026-03-08
+最終更新日: 2026-11-08
 
 ## 1. 目的
 
@@ -90,3 +90,51 @@ limit 50;
 - 閾値超過があれば、対象requestを監査ログで追跡し、当日中に `done/failed` まで更新する
 - `docs/monitoring-incident-template.md` を使って原因と再発防止策を記録する
 - 重要判断は `docs/decision-log.md` へ追記する
+
+## 7. 本番デプロイと環境変数
+
+本番は Cloudflare Workers の Worker `hello-next-js`(support.resp.work)で稼働している。
+
+### 7.1 環境変数の置き場所(重要)
+
+- 本番の値は、必ず **Cloudflare の secret**(`npx wrangler secret put`)か、**`wrangler.jsonc` の `vars`** に置く。
+- `npm run deploy` の時点で、OpenNext は手元の `.env` / `.env.local` などを Worker に同梱する(`.open-next/cloudflare/next-env.mjs`)。同梱された値は、secret / vars に無いキーだけを埋める。そのため secret が未登録だと、`.env.local` の開発用の値(`http://localhost:3000` など)がそのまま本番で使われる。
+- 本番必須のキー(`scripts/lib/deploy-checks.mjs` の `REQUIRED_PRODUCTION_KEYS`):
+  - `AUTH0_DOMAIN` / `AUTH0_CLIENT_ID` / `AUTH0_CLIENT_SECRET` / `AUTH0_SECRET` / `AUTH0_APP_BASE_URL`
+  - `DATABASE_URL` / `JOB_ADMIN_KEY`
+- `AUTH0_APP_BASE_URL` の本番値は `https://support.resp.work`(末尾スラッシュなし)。
+
+### 7.2 secret の設定手順
+
+- `npx wrangler secret put <KEY>` は対話入力で値を受け取る。**Claude Code の `!` から実行すると入力を受け取れず、空の値が登録される**。それでも「Success!」と表示されるので注意する。
+  - 秘密の値: 手元のターミナルで実行する。
+  - 秘密でない値: `printf '%s' '<値>' | npx wrangler secret put <KEY>` のようにパイプで渡してもよい。
+- 登録済みの secret の名前は `npx wrangler secret list` で確認できる。値は表示されない。
+- secret の更新は再デプロイなしで即時に反映される。更新後は必ず次を実行する。
+  ```bash
+  npm run verify:prod-auth
+  ```
+
+### 7.3 デプロイ時の自動チェック
+
+`npm run deploy` は次の順で実行される。チェックに失敗すると、その時点で中断する。
+
+1. `opennextjs-cloudflare build`
+2. `scripts/check-bundled-env.mjs`(デプロイ前)
+   - 本番必須のキーが secret / vars に未登録なら中止する。
+   - `.env` から同梱された localhost の値が、上書きされずに本番へ入る場合も中止する。
+   - secret / vars に無く `.env` の値で動くキーは、警告として表示する。
+   - 出力はキー名のみで、値は表示しない。
+3. `opennextjs-cloudflare deploy`
+4. `scripts/verify-prod-auth.mjs`(デプロイ後)
+   - 本番の `/api/auth/login` が Auth0 に渡す `redirect_uri` が `https://support.resp.work/api/auth/callback` かを確認する。
+   - secret の値自体の誤り(2026-11-08 の障害)は、この方法でしか検出できない。
+   - 確認先は環境変数 `PROD_BASE_URL` で変更できる。既定値は `https://support.resp.work`。
+
+### 7.4 ログインできない時
+
+1. `npm run verify:prod-auth` を実行し、`redirect_uri` を確認する。
+2. 結果に応じて対処する。
+   - `redirect_uri` が localhost になっている: `AUTH0_APP_BASE_URL` の secret を本番値で設定し直す。
+   - `HTTP 500: Location ヘッダーがありません`: secret が空か未登録。`curl -s https://support.resp.work/api/auth/login` の `details` で、欠けているキーを確認する。
+   - Auth0 で「Callback URL mismatch」が出る: Auth0 ダッシュボードの Allowed Callback URLs に `https://support.resp.work/api/auth/callback` があるか確認する。

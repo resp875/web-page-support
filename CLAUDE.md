@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev        # Dev server with Turbopack (localhost:3000)
 npm run build      # Production build (Node.js)
 npm run preview    # OpenNext Cloudflare build + local preview (localhost:8787)
-npm run deploy     # Build and deploy to Cloudflare Workers
+npm run deploy     # Build, pre-deploy env check, deploy to Cloudflare Workers, verify prod login redirect
+npm run verify:prod-auth  # Check prod /api/auth/login redirect_uri (run after `wrangler secret put`)
 npm run lint       # ESLint
 ```
 
@@ -16,7 +17,7 @@ npm run lint       # ESLint
 npm test           # Vitest unit tests (src/lib/__tests__/, in-memory store — no DATABASE_URL needed)
 ```
 
-Unit tests cover `src/lib/` only; use `docs/e2e-checklist.md` for manual E2E validation of pages and the admin flow. `npm run lint` currently fails inside ESLint's config loader ("Converting circular structure to JSON") — a pre-existing config issue, not caused by app code.
+Unit tests cover `src/lib/` and `scripts/lib/` (deploy-check logic); production env vars must live in Cloudflare secrets / `wrangler.jsonc` vars, not `.env.local` (see `docs/operation-runbook.md` §7); use `docs/e2e-checklist.md` for manual E2E validation of pages and the admin flow. `npm run lint` currently fails inside ESLint's config loader ("Converting circular structure to JSON") — a pre-existing config issue, not caused by app code.
 
 ## Architecture Overview
 

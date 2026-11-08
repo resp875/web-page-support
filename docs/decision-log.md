@@ -1,6 +1,6 @@
 # Resp Support 開発方針・決定ログ
 
-最終更新日: 2026-03-08
+最終更新日: 2026-11-08
 
 このファイルは、実装前に合意した方針・意思決定を記録するためのログです。  
 今後、対応が進展したり方針に追加・修正が発生した場合は、必ずこのファイルを更新します。
@@ -39,6 +39,13 @@
    - 方針: 公開リンクは知っている人なら誰でも参加できるため使わず、申請者のメールアドレスだけを App Store Connect の外部テスターグループへ招待する。申請はAndroidと同じ `queued -> awaiting_manual -> done/failed` のキューで管理する
    - 実装: `android_test_request_jobs` を `platform` 列で共用。ルートごとの処理は `src/lib/closed-test-request-handlers.ts` に共通化
    - 将来課題: 招待作業は当面手動。件数が増えたら App Store Connect API（betaTesters）での自動化を検討する
+
+6. **本番の環境変数は Cloudflare の secret / vars にすべて置く。`.env.local` の同梱には頼らない（確定）**
+   - 背景: 本番 (support.resp.work) でログインすると、Auth0 での認証後に `http://localhost:3000` へ戻されていた。原因は、secret `AUTH0_APP_BASE_URL` に localhost が設定されていたこと。さらに `DATABASE_URL` / `JOB_ADMIN_KEY` は secret に無く、デプロイ時に `.env.local` から同梱された値で動いていた。
+   - 方針: 本番必須のキーは secret か `wrangler.jsonc` の `vars` に登録する。`npm run deploy` にデプロイ前後のチェックを組み込み、再発を検知する（Runbook §7）。
+   - 補足:
+     - 本番は 2026-11-08 時点でも Cloudflare Workers (OpenNext) で稼働している。2026-03-01 の「Vercel へ移行（確定）」は未実施。継続するか撤回するかは別途判断する。
+     - 「サーバーレスでは Auth0 ログインが動かない」のは `@auth0/nextjs-auth0` のミドルウェアの話。2026-02-16（`3ef66a5`）に自前の OAuth2 実装 (`src/app/api/auth/[...auth0]/route.ts`) へ置き換え済みで、本番でのログインが完了することを 2026-11-08 に確認した。
 
 ---
 
@@ -189,3 +196,20 @@
 9. **仕様書の次フェーズタスクを未完了項目へ整理**
    - 背景: 実装済み項目が「次フェーズ」に残り、運用上の優先順位が読み取りづらくなっていたため
    - 内容: `docs/specification.md` の次フェーズを現状の未完了タスクへ更新
+
+### 2026-11-08
+
+1. **本番ログイン障害（戻り先が localhost）を修正**
+   - 内容: secret `AUTH0_APP_BASE_URL` を `https://support.resp.work` に修正した。`DATABASE_URL` / `JOB_ADMIN_KEY` を secret に登録した。
+   - 確認:
+     - 本番でログインし、会員画面が表示された。
+     - 管理画面で既存の申請が表示された（Neon への接続を確認）。
+   - 備考: 途中で Claude Code の `!` から `wrangler secret put` を実行し、空の値が登録された。その間、`/api/auth/login` が一時的に 500 を返した。
+
+2. **デプロイ前後の環境変数チェックを追加**
+   - 内容:
+     - `scripts/check-bundled-env.mjs`（デプロイ前）: 本番必須キーが secret / vars に未登録の場合、または localhost の同梱値が本番へ入る場合に中止する。
+     - `scripts/verify-prod-auth.mjs`（デプロイ後。`npm run verify:prod-auth` で単体実行も可）: 本番の `redirect_uri` を確認する。
+     - 判定ロジックは `scripts/lib/deploy-checks.mjs` に置き、`scripts/__tests__/` でテストする。
+   - 未対応:
+     - `GOOGLE_PLAY_*` / `ANDROID_ENROLLMENT_PROVIDER` / `ANDROID_REQUEST_NOTIFY_WEBHOOK_URL` / `CRON_SECRET` は、まだ `.env.local` の同梱値で動いている（チェックの警告に表示される）。secret / vars への移行は別途行う。
