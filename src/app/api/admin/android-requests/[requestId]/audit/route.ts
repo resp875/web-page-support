@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listAuditLogsByRequestId } from "@/lib/android-test-request-audit-store";
-
-function isAdminRequest(req: NextRequest): boolean {
-  const adminKey = process.env.JOB_ADMIN_KEY;
-  if (!adminKey) {
-    return false;
-  }
-
-  const requestKey = req.headers.get("x-job-admin-key");
-  return requestKey === adminKey;
-}
+import { isAdminRequest } from "@/lib/closed-test-request-handlers";
 
 export async function GET(
   req: NextRequest,

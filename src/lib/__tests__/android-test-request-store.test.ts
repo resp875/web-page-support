@@ -197,3 +197,72 @@ describe("listJobsByStatus", () => {
     expect(jobs.length).toBeLessThanOrEqual(1);
   });
 });
+
+describe("プラットフォーム別のジョブ管理", () => {
+  it("platform を省略すると android のジョブになる", async () => {
+    const { job } = await createOrReuseQueuedJob(`user-${crypto.randomUUID()}`, null);
+    expect(job.platform).toBe("android");
+  });
+
+  it("platform=ios を指定すると ios のジョブになり、取得時も ios のまま", async () => {
+    const { job } = await createOrReuseQueuedJob(`user-${crypto.randomUUID()}`, "ios@example.com", "ios");
+    expect(job.platform).toBe("ios");
+    expect((await getJobById(job.requestId))!.platform).toBe("ios");
+  });
+
+  it("Android が対応中でも、同じユーザーの iOS 申請は新規作成される", async () => {
+    const userId = `user-${crypto.randomUUID()}`;
+    const { job: android } = await createOrReuseQueuedJob(userId, null, "android");
+    await transitionJobStatus(android.requestId, { toStatus: "awaiting_manual" });
+
+    const { job: ios, reused } = await createOrReuseQueuedJob(userId, null, "ios");
+    expect(reused).toBe(false);
+    expect(ios.requestId).not.toBe(android.requestId);
+    expect(ios.platform).toBe("ios");
+  });
+
+  it("iOS が受付済みでも、同じユーザーの Android 申請は新規作成される", async () => {
+    const userId = `user-${crypto.randomUUID()}`;
+    const { job: ios } = await createOrReuseQueuedJob(userId, null, "ios");
+
+    const { job: android, reused } = await createOrReuseQueuedJob(userId, null, "android");
+    expect(reused).toBe(false);
+    expect(android.requestId).not.toBe(ios.requestId);
+    expect(android.platform).toBe("android");
+  });
+
+  it("同じプラットフォームの対応中ジョブは再利用される(iOS)", async () => {
+    const userId = `user-${crypto.randomUUID()}`;
+    const { job: first } = await createOrReuseQueuedJob(userId, null, "ios");
+    await transitionJobStatus(first.requestId, { toStatus: "awaiting_manual" });
+
+    const { job: second, reused } = await createOrReuseQueuedJob(userId, null, "ios");
+    expect(reused).toBe(true);
+    expect(second.requestId).toBe(first.requestId);
+  });
+
+  it("listJobsByStatus は platform で絞り込める", async () => {
+    const userId = `user-${crypto.randomUUID()}`;
+    const { job: android } = await createOrReuseQueuedJob(userId, null, "android");
+    const { job: ios } = await createOrReuseQueuedJob(userId, null, "ios");
+
+    const iosJobs = await listJobsByStatus("queued", 50, "ios");
+    expect(iosJobs.some((j) => j.requestId === ios.requestId)).toBe(true);
+    expect(iosJobs.some((j) => j.requestId === android.requestId)).toBe(false);
+    expect(iosJobs.every((j) => j.platform === "ios")).toBe(true);
+
+    const androidJobs = await listJobsByStatus("queued", 50, "android");
+    expect(androidJobs.some((j) => j.requestId === android.requestId)).toBe(true);
+    expect(androidJobs.some((j) => j.requestId === ios.requestId)).toBe(false);
+  });
+
+  it("listJobsByStatus で platform を省略すると両方を返す", async () => {
+    const userId = `user-${crypto.randomUUID()}`;
+    const { job: android } = await createOrReuseQueuedJob(userId, null, "android");
+    const { job: ios } = await createOrReuseQueuedJob(userId, null, "ios");
+
+    const jobs = await listJobsByStatus("queued", 50);
+    expect(jobs.some((j) => j.requestId === android.requestId)).toBe(true);
+    expect(jobs.some((j) => j.requestId === ios.requestId)).toBe(true);
+  });
+});

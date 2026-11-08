@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 type Status = "queued" | "awaiting_manual" | "done" | "failed";
+type Platform = "android" | "ios";
 
 interface AdminJob {
   requestId: string;
   userId: string;
+  platform: Platform;
   requesterEmail: string | null;
   status: Status;
   createdAt: string;
@@ -38,9 +40,15 @@ const STATUS_LABEL: Record<Status, string> = {
   failed: "失敗",
 };
 
+const PLATFORM_LABEL: Record<Platform, string> = {
+  android: "Android",
+  ios: "iOS",
+};
+
 export default function AdminAndroidRequestsPage() {
   const [adminKey, setAdminKey] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
+  const [platformFilter, setPlatformFilter] = useState<"all" | Platform>("all");
   const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,7 +79,8 @@ export default function AdminAndroidRequestsPage() {
 
     try {
       const statusQuery = statusFilter === "all" ? "" : `&status=${statusFilter}`;
-      const response = await fetch(`/api/admin/android-requests?limit=100${statusQuery}`, {
+      const platformQuery = platformFilter === "all" ? "" : `&platform=${platformFilter}`;
+      const response = await fetch(`/api/admin/android-requests?limit=100${statusQuery}${platformQuery}`, {
         headers: {
           "x-job-admin-key": adminKey,
         },
@@ -92,7 +101,16 @@ export default function AdminAndroidRequestsPage() {
     }
   };
 
-  const transitionStatus = async (requestId: string, toStatus: Status) => {
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      setMessage(`${email} をコピーしました。`);
+    } catch {
+      setMessage("メールアドレスのコピーに失敗しました。");
+    }
+  };
+
+  const transitionStatus = async (requestId: string, platform: Platform, toStatus: Status) => {
     if (!adminKey) {
       setMessage("管理者キーを入力してください。");
       return;
@@ -102,7 +120,7 @@ export default function AdminAndroidRequestsPage() {
     setMessage("");
 
     try {
-      const response = await fetch(`/api/closed-test/android-request/${requestId}/transition`, {
+      const response = await fetch(`/api/closed-test/${platform}-request/${requestId}/transition`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,16 +176,25 @@ export default function AdminAndroidRequestsPage() {
     <main className="mx-auto max-w-6xl p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Android申請 管理ダッシュボード</CardTitle>
+          <CardTitle>テスト参加申請 管理ダッシュボード(Android / iOS)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
             <Input
               type="password"
               value={adminKey}
               onChange={(event) => setAdminKey(event.target.value)}
               placeholder="JOB_ADMIN_KEY を入力"
             />
+            <select
+              className="h-9 rounded-md border px-3 text-sm"
+              value={platformFilter}
+              onChange={(event) => setPlatformFilter(event.target.value as "all" | Platform)}
+            >
+              <option value="all">全プラットフォーム</option>
+              <option value="android">Android</option>
+              <option value="ios">iOS</option>
+            </select>
             <select
               className="h-9 rounded-md border px-3 text-sm"
               value={statusFilter}
@@ -190,6 +217,7 @@ export default function AdminAndroidRequestsPage() {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-left">
                 <tr>
+                  <th className="px-3 py-2">platform</th>
                   <th className="px-3 py-2">requestId</th>
                   <th className="px-3 py-2">email</th>
                   <th className="px-3 py-2">status</th>
@@ -200,8 +228,18 @@ export default function AdminAndroidRequestsPage() {
               <tbody>
                 {sortedJobs.map((job) => (
                   <tr key={job.requestId} className="border-t align-top">
+                    <td className="px-3 py-2">{PLATFORM_LABEL[job.platform] ?? job.platform}</td>
                     <td className="px-3 py-2 font-mono text-xs">{job.requestId}</td>
-                    <td className="px-3 py-2">{job.requesterEmail || "-"}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span>{job.requesterEmail || "-"}</span>
+                        {job.platform === "ios" && job.requesterEmail && (
+                          <Button size="sm" variant="outline" onClick={() => void copyEmail(job.requesterEmail!)}>
+                            コピー
+                          </Button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2">{STATUS_LABEL[job.status]}</td>
                     <td className="px-3 py-2">{new Date(job.updatedAt).toLocaleString()}</td>
                     <td className="px-3 py-2">
@@ -211,7 +249,7 @@ export default function AdminAndroidRequestsPage() {
                             size="sm"
                             variant="outline"
                             disabled={transitioningRequestId === job.requestId}
-                            onClick={() => transitionStatus(job.requestId, "awaiting_manual")}
+                            onClick={() => transitionStatus(job.requestId, job.platform, "awaiting_manual")}
                           >
                             対応中へ
                           </Button>
@@ -221,7 +259,7 @@ export default function AdminAndroidRequestsPage() {
                             <Button
                               size="sm"
                               disabled={transitioningRequestId === job.requestId}
-                              onClick={() => transitionStatus(job.requestId, "done")}
+                              onClick={() => transitionStatus(job.requestId, job.platform, "done")}
                             >
                               完了へ
                             </Button>
@@ -229,7 +267,7 @@ export default function AdminAndroidRequestsPage() {
                               size="sm"
                               variant="destructive"
                               disabled={transitioningRequestId === job.requestId}
-                              onClick={() => transitionStatus(job.requestId, "failed")}
+                              onClick={() => transitionStatus(job.requestId, job.platform, "failed")}
                             >
                               失敗へ
                             </Button>
@@ -248,7 +286,7 @@ export default function AdminAndroidRequestsPage() {
                 ))}
                 {sortedJobs.length === 0 && (
                   <tr>
-                    <td className="px-3 py-6 text-center text-gray-500" colSpan={5}>
+                    <td className="px-3 py-6 text-center text-gray-500" colSpan={6}>
                       データがありません。
                     </td>
                   </tr>

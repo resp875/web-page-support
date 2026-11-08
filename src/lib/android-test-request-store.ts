@@ -1,10 +1,17 @@
 export type AndroidRequestStatus = "queued" | "awaiting_manual" | "done" | "failed";
+export type TestRequestPlatform = "android" | "ios";
+
+export const TEST_REQUEST_PLATFORMS: TestRequestPlatform[] = ["android", "ios"];
+
+export function isTestRequestPlatform(value: unknown): value is TestRequestPlatform {
+  return typeof value === "string" && (TEST_REQUEST_PLATFORMS as string[]).includes(value);
+}
 
 export interface AndroidTestRequestJob {
   requestId: string;
   userId: string;
   requesterEmail: string | null;
-  platform: "android";
+  platform: TestRequestPlatform;
   status: AndroidRequestStatus;
   createdAt: string;
   updatedAt: string;
@@ -37,7 +44,7 @@ function mapDbRowToJob(row: Record<string, unknown>): AndroidTestRequestJob {
     requestId: String(row.request_id),
     userId: String(row.user_id),
     requesterEmail: row.requester_email ? String(row.requester_email) : null,
-    platform: "android",
+    platform: isTestRequestPlatform(row.platform) ? row.platform : "android",
     status: row.status as AndroidRequestStatus,
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
@@ -63,12 +70,17 @@ function canTransition(from: AndroidRequestStatus, to: AndroidRequestStatus): bo
   return false;
 }
 
-export async function createOrReuseQueuedJob(userId: string, requesterEmail: string | null): Promise<CreateJobResult> {
+export async function createOrReuseQueuedJob(
+  userId: string,
+  requesterEmail: string | null,
+  platform: TestRequestPlatform = "android",
+): Promise<CreateJobResult> {
   if (sql) {
     const existingRows = await sql`
       select *
       from android_test_request_jobs
       where user_id = ${userId}
+        and platform = ${platform}
         and status in ('queued', 'awaiting_manual', 'processing')
       order by created_at desc
       limit 1
@@ -104,14 +116,14 @@ export async function createOrReuseQueuedJob(userId: string, requesterEmail: str
       insertedRows = await sql`
         insert into android_test_request_jobs
         (request_id, user_id, requester_email, platform, status, attempt_count)
-        values (${requestId}, ${userId}, ${requesterEmail}, 'android', 'queued', 0)
+        values (${requestId}, ${userId}, ${requesterEmail}, ${platform}, 'queued', 0)
         returning *
       `;
     } catch {
       insertedRows = await sql`
         insert into android_test_request_jobs
         (request_id, user_id, platform, status, attempt_count)
-        values (${requestId}, ${userId}, 'android', 'queued', 0)
+        values (${requestId}, ${userId}, ${platform}, 'queued', 0)
         returning *
       `;
     }
@@ -123,7 +135,11 @@ export async function createOrReuseQueuedJob(userId: string, requesterEmail: str
   }
 
   for (const job of jobStore.values()) {
-    if (job.userId === userId && (job.status === "queued" || job.status === "awaiting_manual")) {
+    if (
+      job.userId === userId &&
+      job.platform === platform &&
+      (job.status === "queued" || job.status === "awaiting_manual")
+    ) {
       return { job, reused: true };
     }
   }
@@ -135,7 +151,7 @@ export async function createOrReuseQueuedJob(userId: string, requesterEmail: str
     requestId,
     userId,
     requesterEmail,
-    platform: "android",
+    platform,
     status: "queued",
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -178,23 +194,36 @@ interface TransitionInput {
   testJoinUrl?: string;
 }
 
-export async function listJobsByStatus(status: AndroidRequestStatus, limit: number): Promise<AndroidTestRequestJob[]> {
+export async function listJobsByStatus(
+  status: AndroidRequestStatus,
+  limit: number,
+  platform?: TestRequestPlatform,
+): Promise<AndroidTestRequestJob[]> {
   const safeLimit = Math.max(1, Math.min(limit, 50));
 
   if (sql) {
-    const rows = await sql`
-      select *
-      from android_test_request_jobs
-      where status = ${status}
-      order by created_at asc
-      limit ${safeLimit}
-    `;
+    const rows = platform
+      ? await sql`
+          select *
+          from android_test_request_jobs
+          where status = ${status}
+            and platform = ${platform}
+          order by created_at asc
+          limit ${safeLimit}
+        `
+      : await sql`
+          select *
+          from android_test_request_jobs
+          where status = ${status}
+          order by created_at asc
+          limit ${safeLimit}
+        `;
 
     return rows.map((row) => mapDbRowToJob(row as Record<string, unknown>));
   }
 
   const jobs = Array.from(jobStore.values())
-    .filter((job) => job.status === status)
+    .filter((job) => job.status === status && (!platform || job.platform === platform))
     .sort((first, second) => first.createdAt.localeCompare(second.createdAt))
     .slice(0, safeLimit);
 

@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   AndroidRequestStatus,
+  isTestRequestPlatform,
   listJobsByStatus,
 } from "@/lib/android-test-request-store";
+import { isAdminRequest } from "@/lib/closed-test-request-handlers";
 
 const ALL_STATUSES: AndroidRequestStatus[] = ["queued", "awaiting_manual", "done", "failed"];
-
-function isAdminRequest(req: NextRequest): boolean {
-  const adminKey = process.env.JOB_ADMIN_KEY;
-  if (!adminKey) {
-    return false;
-  }
-
-  const requestKey = req.headers.get("x-job-admin-key");
-  return requestKey === adminKey;
-}
 
 function parseStatus(value: string | null): AndroidRequestStatus | null {
   if (!value) {
@@ -38,11 +30,13 @@ export async function GET(req: NextRequest) {
     const safeLimit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 200)) : 50;
 
     const status = parseStatus(req.nextUrl.searchParams.get("status"));
+    const platformParam = req.nextUrl.searchParams.get("platform");
+    const platform = isTestRequestPlatform(platformParam) ? platformParam : undefined;
 
     const jobs = status
-      ? await listJobsByStatus(status, safeLimit)
+      ? await listJobsByStatus(status, safeLimit, platform)
       : (
-          await Promise.all(ALL_STATUSES.map((item) => listJobsByStatus(item, safeLimit)))
+          await Promise.all(ALL_STATUSES.map((item) => listJobsByStatus(item, safeLimit, platform)))
         )
           .flat()
           .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -52,6 +46,7 @@ export async function GET(req: NextRequest) {
       jobs: jobs.map((job) => ({
         requestId: job.requestId,
         userId: job.userId,
+        platform: job.platform,
         requesterEmail: job.requesterEmail,
         status: job.status,
         createdAt: job.createdAt,
