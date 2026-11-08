@@ -7,10 +7,10 @@ import { motion } from "framer-motion";
 import Head from "next/head";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ClosedTestRequestCard, ClosedTestRequestCardCopy } from "@/components/ClosedTestRequestCard";
 import { MessageCircle, Brain, Layers, ArrowRight } from "lucide-react";
 
 type AuthState = "loading" | "guest" | "member";
-type AndroidRequestStatus = "queued" | "awaiting_manual" | "done" | "failed";
 
 interface ManualContentItem {
   id: string;
@@ -36,65 +36,52 @@ interface User {
   email?: string;
 }
 
-function LoggedInHome({ user }: { user: User | null }) {
-  const [isSubmittingAndroidRequest, setIsSubmittingAndroidRequest] = useState(false);
-  const [androidRequestMessage, setAndroidRequestMessage] = useState<string>("");
-  const [androidRequestStatus, setAndroidRequestStatus] = useState<AndroidRequestStatus | null>(null);
-  const [androidRequestId, setAndroidRequestId] = useState<string | null>(null);
-  const [androidRequestUpdatedAt, setAndroidRequestUpdatedAt] = useState<string | null>(null);
-  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
-  const [manualItems, setManualItems] = useState<ManualContentItem[]>([]);
-  const [eventItems, setEventItems] = useState<EventContentItem[]>([]);
-  const [isLoadingMemberContent, setIsLoadingMemberContent] = useState(true);
-
-  const statusLabelMap: Record<AndroidRequestStatus, string> = {
-    queued: "受付済み",
-    awaiting_manual: "対応中",
-    done: "完了",
-    failed: "失敗",
-  };
-
-  const statusDescriptionMap: Record<AndroidRequestStatus, string> = {
+const ANDROID_REQUEST_COPY: ClosedTestRequestCardCopy = {
+  title: "Android クローズドテスト参加申請",
+  description:
+    "参加リクエストを送信すると、運用担当が手動でテスター追加を実施します。ステータスは受付後に順次更新されます。",
+  buttonLabel: "Androidテスト参加をリクエスト",
+  statusDescription: {
     queued: "申請を受け付けました。担当者への通知を送信済みです。",
     awaiting_manual: "担当者が Play Console で手動対応中です。完了までしばらくお待ちください。",
     done: "手続きが完了しました。クローズドテスト参加の準備ができています。",
     failed: "手続きに失敗しました。時間をおいて再申請いただくか、お問い合わせください。",
-  };
+  },
+};
 
-  const refreshAndroidRequestStatus = async (requestId: string) => {
-    setIsRefreshingStatus(true);
+const IOS_REQUEST_COPY: ClosedTestRequestCardCopy = {
+  title: "iOS 外部テスト(TestFlight)参加申請",
+  description: (
+    <>
+      <p>
+        参加リクエストを送信すると、運用担当がログイン中のメールアドレス宛てに TestFlight の招待メールを送ります。招待はApple
+        IDのメールアドレスと一致していなくても受け取れます。
+      </p>
+      <p className="mt-2">iOS 16.0 以上の iPhone が必要です。</p>
+    </>
+  ),
+  buttonLabel: "iOSテスト参加をリクエスト",
+  statusDescription: {
+    queued: "申請を受け付けました。担当者への通知を送信済みです。",
+    awaiting_manual: "担当者が App Store Connect で招待を準備中です。完了までしばらくお待ちください。",
+    done: "招待メールを送信しました。メール内の「View in TestFlight」から参加してください。",
+    failed: "手続きに失敗しました。時間をおいて再申請いただくか、お問い合わせください。",
+  },
+  doneExtra: (
+    <p className="mt-3 text-sm text-gray-700">
+      参加手順は
+      <a href="/manual/ios-install" className="mx-1 font-semibold text-[#0d3b66] underline">
+        iOSインストールガイド
+      </a>
+      をご覧ください。
+    </p>
+  ),
+};
 
-    try {
-      const response = await fetch(`/api/closed-test/android-request/${requestId}`, {
-        method: "GET",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setAndroidRequestMessage(data?.message || "申請ステータスの取得に失敗しました。");
-        return;
-      }
-
-      const statusFromApi = data?.status as AndroidRequestStatus | undefined;
-      setAndroidRequestStatus(statusFromApi || null);
-      setAndroidRequestUpdatedAt(typeof data?.updatedAt === "string" ? data.updatedAt : null);
-    } catch {
-      setAndroidRequestMessage("申請ステータスの取得に失敗しました。");
-    } finally {
-      setIsRefreshingStatus(false);
-    }
-  };
-
-  useEffect(() => {
-    const savedRequestId = window.localStorage.getItem("latestAndroidRequestId");
-    if (!savedRequestId) {
-      return;
-    }
-
-    setAndroidRequestId(savedRequestId);
-    void refreshAndroidRequestStatus(savedRequestId);
-  }, []);
+function LoggedInHome({ user }: { user: User | null }) {
+  const [manualItems, setManualItems] = useState<ManualContentItem[]>([]);
+  const [eventItems, setEventItems] = useState<EventContentItem[]>([]);
+  const [isLoadingMemberContent, setIsLoadingMemberContent] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -156,48 +143,6 @@ function LoggedInHome({ user }: { user: User | null }) {
     });
   };
 
-  const handleAndroidRequest = async () => {
-    if (isSubmittingAndroidRequest) {
-      return;
-    }
-
-    setIsSubmittingAndroidRequest(true);
-    setAndroidRequestMessage("");
-
-    try {
-      const response = await fetch("/api/closed-test/android-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setAndroidRequestStatus(null);
-        setAndroidRequestMessage(data?.message || "参加リクエストの送信に失敗しました。時間をおいて再度お試しください。");
-        return;
-      }
-
-      const requestIdFromApi = typeof data?.requestId === "string" ? data.requestId : null;
-      if (requestIdFromApi) {
-        setAndroidRequestId(requestIdFromApi);
-        window.localStorage.setItem("latestAndroidRequestId", requestIdFromApi);
-      }
-
-      const statusFromApi = data?.status as AndroidRequestStatus | undefined;
-      setAndroidRequestStatus(statusFromApi || null);
-      setAndroidRequestUpdatedAt(typeof data?.updatedAt === "string" ? data.updatedAt : null);
-      setAndroidRequestMessage(data?.message || "参加リクエストを受け付けました。運用担当が手動で対応します。");
-    } catch {
-      setAndroidRequestStatus(null);
-      setAndroidRequestMessage("参加リクエストの送信に失敗しました。時間をおいて再度お試しください。");
-    } finally {
-      setIsSubmittingAndroidRequest(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 font-sans">
       <section className="bg-white py-16">
@@ -211,70 +156,9 @@ function LoggedInHome({ user }: { user: User | null }) {
 
       <section className="py-10">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-2">
-          <Card className="rounded-xl shadow-sm">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold text-[#0d3b66]">Android クローズドテスト参加申請</h2>
-              <p className="mt-2 text-sm text-gray-600">
-                参加リクエストを送信すると、運用担当が手動でテスター追加を実施します。ステータスは受付後に順次更新されます。
-              </p>
-              <Button
-                className="mt-5 bg-[#0d3b66] text-white hover:bg-[#155a91]"
-                onClick={handleAndroidRequest}
-                disabled={isSubmittingAndroidRequest}
-              >
-                {isSubmittingAndroidRequest ? "送信中..." : "Androidテスト参加をリクエスト"}
-              </Button>
-              {androidRequestMessage && (
-                <p className="mt-3 text-sm text-gray-700">{androidRequestMessage}</p>
-              )}
-              {androidRequestStatus && (
-                <div className="mt-2 rounded-md bg-[#eef5fb] p-3 text-sm text-[#0d3b66]">
-                  <p>
-                    現在のステータス: <span className="font-semibold">{statusLabelMap[androidRequestStatus]}</span>
-                  </p>
-                  <p className="mt-1 text-xs text-[#275f90]">{statusDescriptionMap[androidRequestStatus]}</p>
-                  {androidRequestUpdatedAt && (
-                    <p className="mt-1 text-xs text-[#275f90]">
-                      最終更新: {new Date(androidRequestUpdatedAt).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              )}
-              {androidRequestId && (
-                <div className="mt-3">
-                  <Button
-                    variant="outline"
-                    className="border-[#0d3b66] text-[#0d3b66] hover:bg-[#e6f0fa]"
-                    onClick={() => void refreshAndroidRequestStatus(androidRequestId)}
-                    disabled={isRefreshingStatus}
-                  >
-                    {isRefreshingStatus ? "更新中..." : "ステータスを再取得"}
-                  </Button>
-                </div>
-              )}
-              {androidRequestStatus === "failed" && (
-                <p className="mt-3 text-sm text-gray-700">
-                  再申請を行うか、
-                  <a href="mailto:respwork11+support@gmail.com" className="text-[#0d3b66] underline">
-                    サポート窓口
-                  </a>
-                  へご連絡ください。
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <ClosedTestRequestCard platform="android" copy={ANDROID_REQUEST_COPY} />
 
-          <Card className="rounded-xl shadow-sm">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold text-[#0d3b66]">iOS クローズドテスト（案内）</h2>
-              <p className="mt-2 text-sm text-gray-600">
-                iOSは現在、参加案内のみ提供しています。申請機能は後続フェーズで追加予定です。
-              </p>
-              <p className="mt-4 text-sm text-gray-700">
-                準備ができ次第、この画面で申請導線を公開します。
-              </p>
-            </CardContent>
-          </Card>
+          <ClosedTestRequestCard platform="ios" copy={IOS_REQUEST_COPY} />
 
           <Card className="rounded-xl shadow-sm">
             <CardContent className="p-6">

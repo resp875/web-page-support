@@ -2,7 +2,7 @@ create table if not exists android_test_request_jobs (
   request_id text primary key,
   user_id text not null,
   requester_email text,
-  platform text not null default 'android',
+  platform text not null default 'android' check (platform in ('android', 'ios')),
   status text not null check (status in ('queued', 'awaiting_manual', 'done', 'failed')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -17,6 +17,9 @@ create table if not exists android_test_request_jobs (
 
 create index if not exists idx_android_jobs_user_status
   on android_test_request_jobs (user_id, status);
+
+create index if not exists idx_android_jobs_user_platform_status
+  on android_test_request_jobs (user_id, platform, status);
 
 create index if not exists idx_android_jobs_created_at
   on android_test_request_jobs (created_at desc);

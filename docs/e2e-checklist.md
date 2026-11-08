@@ -51,6 +51,20 @@
 期待結果:
 - 認可・状態遷移が仕様どおり拒否される
 
+## 5.1 シナリオD: iOS申請
+
+1. ログイン後画面の「iOS 外部テスト(TestFlight)参加申請」で申請し、`queued` 表示を確認
+2. 同じユーザーがAndroidの申請も出せること（両方が独立したステータスで表示される）を確認
+3. 管理者UIで「iOS」に絞り込み、対象行に platform `iOS` とメールのコピーボタンが出ることを確認
+4. `awaiting_manual` → App Store Connect で招待 → `done` へ更新
+5. ユーザー画面で「ステータスを再取得」し、完了表示とiOSインストールガイドへのリンクを確認
+6. 招待メールの「View in TestFlight」から TestFlight でインストールできることを確認
+7. Androidの requestId を `/api/closed-test/ios-request/<requestId>/transition` に指定すると `404` になることを確認
+
+期待結果:
+- iOSとAndroidの申請が互いに影響せず、それぞれ正しく遷移する
+- 監査ログに iOS の遷移も残る
+
 ## 6. 参考コマンド
 
 ```bash

@@ -32,6 +32,14 @@
    - ログイン前: Resp概要の理解とAuth0経由のユーザー登録導線
    - ログイン後: テスト参加申請、操作マニュアル閲覧、開発イベント情報表示など
 
+### 2026-11-08
+
+5. **iOS外部テストは TestFlight のメール招待 + 申請キューで運用する（確定。3. を更新）**
+   - 背景: TestFlight 外部テストの審査が通り配布できる状態になった。当面は申請者と招待を管理したい
+   - 方針: 公開リンクは知っている人なら誰でも参加できるため使わず、申請者のメールアドレスだけを App Store Connect の外部テスターグループへ招待する。申請はAndroidと同じ `queued -> awaiting_manual -> done/failed` のキューで管理する
+   - 実装: `android_test_request_jobs` を `platform` 列で共用。ルートごとの処理は `src/lib/closed-test-request-handlers.ts` に共通化
+   - 将来課題: 招待作業は当面手動。件数が増えたら App Store Connect API（betaTesters）での自動化を検討する
+
 ---
 
 ## 実装ログ

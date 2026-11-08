@@ -12,11 +12,15 @@ npm run deploy     # Build and deploy to Cloudflare Workers
 npm run lint       # ESLint
 ```
 
-There are no automated tests — use `docs/e2e-checklist.md` for manual E2E validation.
+```bash
+npm test           # Vitest unit tests (src/lib/__tests__/, in-memory store — no DATABASE_URL needed)
+```
+
+Unit tests cover `src/lib/` only; use `docs/e2e-checklist.md` for manual E2E validation of pages and the admin flow. `npm run lint` currently fails inside ESLint's config loader ("Converting circular structure to JSON") — a pre-existing config issue, not caused by app code.
 
 ## Architecture Overview
 
-This is a **Next.js 16 App Router** application serving as a self-service portal for Android closed test enrollment, deployed on Cloudflare Workers via OpenNext.
+This is a **Next.js 16 App Router** application serving as a self-service portal for Android closed test (Google Play) and iOS external test (TestFlight) enrollment, deployed on Cloudflare Workers via OpenNext.
 
 ### Key Abstractions
 
@@ -31,6 +35,8 @@ This is a **Next.js 16 App Router** application serving as a self-service portal
 
 **Job status flow**: `queued → awaiting_manual → done / failed`
 
+**Platforms**: Android and iOS requests share the `android_test_request_jobs` table, store, audit log, notifier and admin UI, distinguished by the `platform` column (`android` | `ios`). Duplicate-request reuse is per platform. Route bodies live in `src/lib/closed-test-request-handlers.ts` (`handleCreateRequest` / `handleGetRequest` / `handleTransition` / `isAdminRequest`); each `src/app/api/closed-test/{android,ios}-request/**` route just passes its platform. A requestId from the other platform's route returns 404. iOS invites are TestFlight **email invites** sent manually in App Store Connect (not the public link) — see `docs/operation-runbook.md` §3.1. The `android-*` file/route names are kept for compatibility even though they now cover both platforms.
+
 ### API Structure
 
 | Route | Auth | Purpose |
@@ -38,7 +44,10 @@ This is a **Next.js 16 App Router** application serving as a self-service portal
 | `POST /api/closed-test/android-request` | Auth0 session | Submit enrollment request |
 | `GET /api/closed-test/android-request/:id` | Auth0 session | Poll request status |
 | `POST /api/closed-test/android-request/:id/transition` | `x-job-admin-key` | Admin: advance job status |
-| `GET /api/admin/android-requests` | `x-job-admin-key` | Admin: list all requests |
+| `POST /api/closed-test/ios-request` | Auth0 session | Submit iOS (TestFlight) request |
+| `GET /api/closed-test/ios-request/:id` | Auth0 session | Poll iOS request status |
+| `POST /api/closed-test/ios-request/:id/transition` | `x-job-admin-key` | Admin: advance iOS job status |
+| `GET /api/admin/android-requests` | `x-job-admin-key` | Admin: list requests (`?status=`, `?platform=android\|ios`) |
 | `GET /api/admin/android-requests/:id/audit` | `x-job-admin-key` | Admin: view audit log |
 | `GET /api/content/manuals` | Auth0 session | Member-only operation manuals |
 | `GET /api/content/events` | Auth0 session | Member-only event info |
@@ -55,7 +64,9 @@ Admin APIs authenticate via `x-job-admin-key` header matching `JOB_ADMIN_KEY` en
 ### Frontend Pages
 
 - `src/app/page.tsx` — Dual-mode: shows public landing (unauthenticated) or member dashboard (authenticated)
-- `src/app/admin/android-requests/page.tsx` — Admin UI for managing enrollment requests
+- `src/components/ClosedTestRequestCard.tsx` — Request/status card used on the dashboard for both platforms (copy passed via props)
+- `src/app/admin/android-requests/page.tsx` — Admin UI for managing enrollment requests (Android + iOS, platform filter)
+- `src/app/manual/*` — Auth-gated guides: `android-install`, `ios-install` (TestFlight; screenshots optional per step), `app-guide`
 - Static HTML pages for `/privacy_policy` and `/child_safety_policy` served via `next.config.ts` rewrites
 
 ### Member Content
@@ -65,7 +76,7 @@ Admin APIs authenticate via `x-job-admin-key` header matching `JOB_ADMIN_KEY` en
 ## Key Documentation
 
 All docs are in `docs/` (written in Japanese):
-- `docs/specification.md` — Full API spec (v1.15)
+- `docs/specification.md` — Full API spec (v1.16)
 - `docs/decision-log.md` — Architecture decisions with rationale
 - `docs/operation-runbook.md` — Operator procedures
 - `docs/monitoring-metrics.md` — KPI definitions

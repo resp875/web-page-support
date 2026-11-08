@@ -1,4 +1,9 @@
-import { AndroidTestRequestJob } from "@/lib/android-test-request-store";
+import { AndroidTestRequestJob, TestRequestPlatform } from "@/lib/android-test-request-store";
+
+const PLATFORM_NOTIFY_LABEL: Record<TestRequestPlatform, { short: string; heading: string }> = {
+  android: { short: "Android申請", heading: "Androidクローズドテスト申請を新規受付しました" },
+  ios: { short: "iOS申請", heading: "iOS外部テスト(TestFlight)申請を新規受付しました" },
+};
 
 interface SlackTextObject {
   type: "mrkdwn" | "plain_text";
@@ -20,14 +25,15 @@ interface SlackWebhookPayload {
 function buildSlackPayload(job: AndroidTestRequestJob): SlackWebhookPayload {
   const requesterEmail = job.requesterEmail || "(取得不可)";
   const adminPageUrl = process.env.ANDROID_REQUEST_ADMIN_PAGE_URL;
-  const text = `【Android申請】新規受付 requestId=${job.requestId} / email=${requesterEmail}`;
+  const label = PLATFORM_NOTIFY_LABEL[job.platform];
+  const text = `【${label.short}】新規受付 requestId=${job.requestId} / email=${requesterEmail}`;
 
   const blocks: SlackBlock[] = [
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: "*Androidクローズドテスト申請を新規受付しました*",
+        text: `*${label.heading}*`,
       },
     },
     {
@@ -66,7 +72,7 @@ function buildSlackPayload(job: AndroidTestRequestJob): SlackWebhookPayload {
   };
 }
 
-export async function notifyManualAndroidRequestQueued(job: AndroidTestRequestJob): Promise<void> {
+export async function notifyManualTestRequestQueued(job: AndroidTestRequestJob): Promise<void> {
   const webhookUrl = process.env.ANDROID_REQUEST_NOTIFY_WEBHOOK_URL;
   if (!webhookUrl) {
     return;
