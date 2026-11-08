@@ -4,6 +4,10 @@
 	"name": "hello-next-js",
 	"compatibility_date": "2026-02-10",
 	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	// 本番の秘密でない値。秘密の値は `wrangler secret put` で登録する(docs/operation-runbook.md §7)
+	"vars": {
+		"ANDROID_REQUEST_ADMIN_PAGE_URL": "https://support.resp.work/admin/android-requests"
+	},
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"

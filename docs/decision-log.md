@@ -212,4 +212,16 @@
      - `scripts/verify-prod-auth.mjs`（デプロイ後。`npm run verify:prod-auth` で単体実行も可）: 本番の `redirect_uri` を確認する。
      - 判定ロジックは `scripts/lib/deploy-checks.mjs` に置き、`scripts/__tests__/` でテストする。
    - 未対応:
-     - `GOOGLE_PLAY_*` / `ANDROID_ENROLLMENT_PROVIDER` / `ANDROID_REQUEST_NOTIFY_WEBHOOK_URL` / `CRON_SECRET` は、まだ `.env.local` の同梱値で動いている（チェックの警告に表示される）。secret / vars への移行は別途行う。
+     - `GOOGLE_PLAY_*` / `ANDROID_ENROLLMENT_PROVIDER` / `ANDROID_REQUEST_NOTIFY_WEBHOOK_URL` / `CRON_SECRET` は、まだ `.env.local` の同梱値で動いている（チェックの警告に表示される）。secret / vars への移行は別途行う。→ 3. で対応
+
+3. **`.env.local` 同梱に頼っていた変数を整理**
+   - 調査: `GOOGLE_PLAY_*` / `ANDROID_ENROLLMENT_PROVIDER` / `CRON_SECRET` は本番のコードから使われていない。Google Play 自動登録の `getAndroidTestEnrollmentService` は呼び出し元がなく、cron エンドポイントは 410 を返すだけ。
+   - 方針:
+     - 使っていない値は secret に移さず、`.env.local` から削除して同梱されないようにする。
+     - Slack 通知の `ANDROID_REQUEST_NOTIFY_WEBHOOK_URL` は secret に登録する。
+     - `ANDROID_REQUEST_ADMIN_PAGE_URL` は `wrangler.jsonc` の `vars` に書く。
+   - 実装: デプロイ前チェックに、秘密情報らしい名前の値が secret で上書きされずに同梱される場合の中止条件を追加した。
+
+4. **公開リポジトリの git 履歴に本番の Auth0 の秘密情報が残っていることが判明**
+   - 内容: `3ef66a5` でコミットされた `.dev.vars` に、本番アプリの `AUTH0_CLIENT_SECRET` / `AUTH0_SECRET` が含まれていた（`69d65ac` で削除済みだが履歴に残る）。リポジトリは公開されている。
+   - 対応（2026-11-08 完了）: Auth0 で client secret をローテーションし、`AUTH0_SECRET` も再生成して、secret と `.env.local` を更新した。新しい secret で本番にログインできることを確認した。履歴の書き換えは、ローテーション後は効果が薄く破壊的なので行わない。

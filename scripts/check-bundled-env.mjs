@@ -1,6 +1,7 @@
 // デプロイ前チェック: `opennextjs-cloudflare build` の後、deploy の前に実行する。
 // - 本番必須のキーが Cloudflare の secret / wrangler.jsonc の vars に登録されているか
 // - .env.local などから同梱された localhost の値が、上書きされずに本番へ入らないか
+// - 秘密情報らしい値が secret で上書きされずに Worker に同梱されないか
 // 値は表示せず、キー名だけを出力する。
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -22,7 +23,7 @@ const secretNames = parseSecretListOutput(
 );
 const varNames = parseWranglerVarNames(fs.readFileSync(path.join(root, "wrangler.jsonc"), "utf8"));
 
-const { missingRequired, localhostOnlyInBundle, bundleOnly } = evaluateBundledEnv({
+const { missingRequired, localhostOnlyInBundle, sensitiveOnlyInBundle, bundleOnly } = evaluateBundledEnv({
   bundled,
   configuredKeys: [...secretNames, ...varNames],
 });
@@ -41,6 +42,11 @@ if (localhostOnlyInBundle.length > 0) {
   failed = true;
   console.error(`✘ localhost を指す値が上書きされずに本番へ入ります: ${localhostOnlyInBundle.join(", ")}`);
   console.error("  本番用の値を secret / vars に登録してください。");
+}
+if (sensitiveOnlyInBundle.length > 0) {
+  failed = true;
+  console.error(`✘ 秘密情報らしい値が .env から Worker に同梱されます: ${sensitiveOnlyInBundle.join(", ")}`);
+  console.error("  本番で使うなら secret に登録し、使わないなら .env.local から削除してください。");
 }
 
 if (failed) {

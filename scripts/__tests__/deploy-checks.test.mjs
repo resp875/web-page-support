@@ -4,6 +4,7 @@ import {
   checkLoginRedirect,
   evaluateBundledEnv,
   isLocalhostValue,
+  isSensitiveKeyName,
   parseSecretListOutput,
   parseWranglerVarNames,
   stripJsonComments,
@@ -31,6 +32,33 @@ describe("isLocalhostValue", () => {
     "manual",
   ])("does not treat %s as localhost", (value) => {
     expect(isLocalhostValue(value)).toBe(false);
+  });
+});
+
+describe("isSensitiveKeyName", () => {
+  it.each([
+    "GOOGLE_PLAY_PRIVATE_KEY",
+    "CRON_SECRET",
+    "AUTH0_CLIENT_SECRET",
+    "ANDROID_REQUEST_NOTIFY_BEARER_TOKEN",
+    "ANDROID_REQUEST_NOTIFY_WEBHOOK_URL",
+    "DATABASE_URL",
+    "DB_PASSWORD",
+    "SOME_API_KEY",
+  ])("treats %s as sensitive", (key) => {
+    expect(isSensitiveKeyName(key)).toBe(true);
+  });
+
+  it.each([
+    "ANDROID_REQUEST_ADMIN_PAGE_URL",
+    "ANDROID_TEST_JOIN_URL",
+    "ANDROID_ENROLLMENT_PROVIDER",
+    "GOOGLE_PLAY_PACKAGE_NAME",
+    "GOOGLE_PLAY_TRACK",
+    "NEXT_PUBLIC_AUTH0_CLIENT_ID",
+    "KEYBOARD_LAYOUT",
+  ])("does not treat %s as sensitive", (key) => {
+    expect(isSensitiveKeyName(key)).toBe(false);
   });
 });
 
@@ -97,7 +125,12 @@ describe("evaluateBundledEnv", () => {
       bundled: { AUTH0_APP_BASE_URL: "http://localhost:3000" },
       configuredKeys: configuredAll,
     });
-    expect(result).toEqual({ missingRequired: [], localhostOnlyInBundle: [], bundleOnly: [] });
+    expect(result).toEqual({
+      missingRequired: [],
+      localhostOnlyInBundle: [],
+      sensitiveOnlyInBundle: [],
+      bundleOnly: [],
+    });
   });
 
   it("reports required keys that are only in the bundle or nowhere", () => {
@@ -118,6 +151,19 @@ describe("evaluateBundledEnv", () => {
     });
     expect(result.localhostOnlyInBundle).toEqual(["ANDROID_REQUEST_ADMIN_PAGE_URL"]);
     expect(result.bundleOnly).toEqual(["ANDROID_REQUEST_ADMIN_PAGE_URL", "ANDROID_TEST_JOIN_URL"]);
+  });
+
+  it("reports sensitive keys that would reach production only via the bundle", () => {
+    const result = evaluateBundledEnv({
+      bundled: {
+        GOOGLE_PLAY_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----x",
+        CRON_SECRET: "abc",
+        GOOGLE_PLAY_PACKAGE_NAME: "work.resp",
+        AUTH0_CLIENT_SECRET: "overridden-by-secret",
+      },
+      configuredKeys: configuredAll,
+    });
+    expect(result.sensitiveOnlyInBundle).toEqual(["GOOGLE_PLAY_PRIVATE_KEY", "CRON_SECRET"]);
   });
 
   it("does not leak values in its result", () => {
