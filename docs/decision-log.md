@@ -17,7 +17,7 @@
 
 ### 2026-03-01
 
-1. **デプロイ先をVercelへ移行する（確定）**
+1. **デプロイ先をVercelへ移行する（確定）** → 2026-11-08 保留に変更（7. 参照）
    - 理由: 今後の機能拡張時にNode.js互換性・SDK利用性・運用性を高めるため
    - 影響: Cloudflare Workers前提の記述や設定を段階的に見直す
 
@@ -44,8 +44,20 @@
    - 背景: 本番 (support.resp.work) でログインすると、Auth0 での認証後に `http://localhost:3000` へ戻されていた。原因は、secret `AUTH0_APP_BASE_URL` に localhost が設定されていたこと。さらに `DATABASE_URL` / `JOB_ADMIN_KEY` は secret に無く、デプロイ時に `.env.local` から同梱された値で動いていた。
    - 方針: 本番必須のキーは secret か `wrangler.jsonc` の `vars` に登録する。`npm run deploy` にデプロイ前後のチェックを組み込み、再発を検知する（Runbook §7）。
    - 補足:
-     - 本番は 2026-11-08 時点でも Cloudflare Workers (OpenNext) で稼働している。2026-03-01 の「Vercel へ移行（確定）」は未実施。継続するか撤回するかは別途判断する。
+     - 本番は 2026-11-08 時点でも Cloudflare Workers (OpenNext) で稼働している。2026-03-01 の「Vercel へ移行（確定）」は未実施。→ 7. で保留に変更。
      - 「サーバーレスでは Auth0 ログインが動かない」のは `@auth0/nextjs-auth0` のミドルウェアの話。2026-02-16（`3ef66a5`）に自前の OAuth2 実装 (`src/app/api/auth/[...auth0]/route.ts`) へ置き換え済みで、本番でのログインが完了することを 2026-11-08 に確認した。
+
+7. **Vercel への移行を保留し、当面は Cloudflare Workers (OpenNext) で運用する（1. を変更）**
+   - 背景: 1. で移行を決めた理由は「Node.js 互換性・SDK 利用性・運用性」だった。2026-11-08 時点で、実際に問題になったのは `@auth0/nextjs-auth0` のミドルウェアだけで、自前の OAuth2 実装で解決済み。署名付きセッション（`jose`）、Neon serverless driver、`node:crypto`（`nodejs_compat`）も Workers 上で動作している。同日のログイン障害の原因は環境変数の設定ミスで、プラットフォームの問題ではない（6. 参照）。
+   - 判断: 移行の作業（DNS 切り替え、環境変数の再登録、Auth0 の URL 設定変更、動作確認）に見合う機能上の改善が現時点でない。費用面でも、Vercel の無料プラン（Hobby）は商用でない利用に限られるため、有料プラン（Pro）が必要になる可能性がある。Workers は今の規模なら無料枠で収まる見込み。
+   - 受け入れる制約:
+     - 公式の Auth0 SDK は使えず、自前のログイン処理を保守し続ける。
+     - Next.js を新しいバージョンに上げるとき、OpenNext の対応を待つ場合がある。
+     - `.env` が同梱されるなど Workers 特有の癖がある（デプロイ前のチェックで対処済み）。
+   - 再検討のきっかけ:
+     - Node.js でしか動かないライブラリ（`googleapis`、`firebase-admin` など）が必要になったとき。
+     - Next.js を新しいバージョンに上げたいのに OpenNext が未対応のとき。
+     - 公式の Auth0 SDK の機能（リフレッシュトークン、MFA の細かい制御など）が必要になったとき。
 
 ---
 
