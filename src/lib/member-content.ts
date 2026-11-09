@@ -29,7 +29,7 @@ export const manualContentItems: ManualContentItem[] = [
     title: "iOSインストールガイド",
     description: "TestFlightの招待メールからRespをインストールする手順を説明します。",
     href: "/manual/ios-install",
-    updatedAt: "2026-11-08T09:00:00+09:00",
+    updatedAt: "2026-11-09T09:00:00+09:00",
   },
   {
     id: "manual-app-guide",

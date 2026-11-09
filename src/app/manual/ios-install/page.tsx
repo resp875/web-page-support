@@ -8,31 +8,55 @@ interface Step {
   image?: string;
 }
 
+const img = (n: number) => `/manual/ios-install/step${String(n).padStart(2, "0")}.png`;
+
 const steps: Step[] = [
   {
     title: "TestFlight アプリをインストールする",
     description:
-      "iPhoneで App Store を開き、「TestFlight」を検索してインストールしてください。TestFlight は Apple 公式のテスト版アプリ配布用アプリです。すでにインストール済みの場合は次の手順へ進んでください。",
+      "iPhoneで App Store を開き、「TestFlight」を検索してインストールしてください。TestFlight は Apple 公式のテスト版アプリ配布用アプリです。すでにインストール済みの場合(ボタンが「開く」になっている場合)は次の手順へ進んでください。",
+    image: img(1),
   },
   {
     title: "招待メールを開き「View in TestFlight」をタップ",
     description:
       "申請が完了すると、登録メールアドレス宛てに TestFlight の招待メールが届きます。iPhoneでメールを開き、「View in TestFlight」をタップしてください。メールが見当たらない場合は迷惑メールフォルダもご確認ください。",
+    image: img(2),
   },
   {
-    title: "TestFlight で「Accept」→「Install」をタップ",
+    title: "「同意する」をタップ",
     description:
-      "TestFlight に RESP のテスト招待が表示されます。「Accept」をタップしてテストに参加し、続けて「Install」をタップしてアプリをダウンロードしてください。",
+      "TestFlight が開き、RESP のテスト招待が表示されます。「同意する」をタップしてテストに参加してください。",
+    image: img(3),
   },
   {
-    title: "インストール完了 — アプリを起動する",
-    description:
-      "インストールが完了すると「Open」ボタンが表示されます。「Open」をタップするか、ホーム画面の RESP アイコンからアプリを起動してください。",
+    title: "「インストール」をタップ",
+    description: "ボタンが「インストール」に変わります。タップしてアプリをダウンロードしてください。",
+    image: img(4),
   },
   {
-    title: "アカウント登録画面",
+    title: "インストール完了 — 「開く」をタップ",
     description:
-      "アプリを初めて起動するとアカウント登録画面が表示されます。ユーザー名・パスワード・ハンドルネーム・メールアドレスを入力し、「登録」ボタンをタップしてアカウントを作成してください。すでにアカウントをお持ちの場合は、画面下部の「ログイン画面へ」から進んでください。",
+      "インストールが完了すると「開く」ボタンが表示されます。「開く」をタップするか、ホーム画面の RESP アイコンからアプリを起動してください。",
+    image: img(5),
+  },
+  {
+    title: "テスト内容の案内 — 「続ける」をタップ",
+    description:
+      "初めて起動したときは、TestFlight によるテスト内容の案内が表示されます。内容を確認して「続ける」をタップしてください。",
+    image: img(6),
+  },
+  {
+    title: "フィードバックの案内 — 「続ける」をタップ",
+    description:
+      "スクリーンショットを撮るとアプリから直接フィードバックを送れることが案内されます。「続ける」をタップするとアプリが始まります。",
+    image: img(7),
+  },
+  {
+    title: "ログイン画面 — 新規の方は「サインアップ」へ",
+    description:
+      "RESP のログイン画面が表示されます。初めての方は画面下部の「サインアップ」からアカウントを作成してください。すでにアカウントをお持ちの場合は、ユーザー名とパスワードを入力して「ログイン」をタップしてください。",
+    image: img(8),
   },
 ];
 
@@ -73,8 +97,8 @@ export default function IosInstallPage() {
                     <Image
                       src={step.image}
                       alt={`手順${i + 1}: ${step.title}`}
-                      width={390}
-                      height={844}
+                      width={750}
+                      height={1334}
                       className="mx-auto block max-h-[500px] w-auto"
                       priority={i === 0}
                     />
