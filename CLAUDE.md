@@ -67,7 +67,7 @@ Admin APIs authenticate via `x-job-admin-key` header matching `JOB_ADMIN_KEY` en
 - `src/app/page.tsx` — Dual-mode: shows public landing (unauthenticated) or member dashboard (authenticated)
 - `src/components/ClosedTestRequestCard.tsx` — Request/status card used on the dashboard for both platforms (copy passed via props)
 - `src/app/admin/android-requests/page.tsx` — Admin UI for managing enrollment requests (Android + iOS, platform filter)
-- `src/app/manual/*` — Auth-gated guides: `android-install`, `ios-install` (TestFlight; screenshots optional per step), `app-guide`
+- `src/app/manual/*` — Auth-gated guides: `android-install`, `ios-install` (TestFlight, screenshots in `public/manual/ios-install/`), `app-guide`
 - Static HTML pages for `/privacy_policy` and `/child_safety_policy` served via `next.config.ts` rewrites
 
 ### Member Content
