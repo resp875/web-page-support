@@ -127,3 +127,11 @@ Local dev: use `.env.local` (Node) or `.dev.vars` (Cloudflare Workers via `npm r
 ## Database Setup
 
 Run schema from `docs/sql/android_test_request_jobs.sql`. For existing databases, apply migrations in `docs/sql/migrations/` in chronological order.
+
+## 未対応TODO
+
+元の記述は`docs/specification.md`の8章「次フェーズのタスク予定」にある。状態が変わったら両方を更新する。
+
+- **週次モニタリングを続けるかどうかを決める**: 8.1で「毎週更新」としているが、レポートは`docs/weekly-monitoring-reports/weekly-monitoring-report-2026-03-08.md`の1回だけで、その後は止まっている。続けるなら初回の結果を振り返り、閾値(`docs/monitoring-metrics.md`)を見直す。やめるなら`docs/decision-log.md`に記録し、仕様書8.1も直す。
+- **会員向けコンテンツの管理方法を移す**(8.2): 操作マニュアルと開発イベント情報は今は静的データ。CMSか管理画面から更新できるようにする。未着手。
+- **TestFlight招待の自動化**(8.3、必要になったら): 今は運用者がApp Store Connectで手で招待している(`docs/operation-runbook.md`)。App Store Connect APIで自動化する。未着手。
